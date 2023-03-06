@@ -11,14 +11,14 @@ import searchengine.services.StatisticsService;
 @RequestMapping("/api")
 public class ApiController {
 
-    private final StatisticsService statisticsService;
+  private final StatisticsService statisticsService;
 
-    public ApiController(StatisticsService statisticsService) {
-        this.statisticsService = statisticsService;
-    }
+  public ApiController(StatisticsService statisticsService) {
+    this.statisticsService = statisticsService;
+  }
 
-    @GetMapping("/statistics")
-    public ResponseEntity<StatisticsResponse> statistics() {
-        return ResponseEntity.ok(statisticsService.getStatistics());
-    }
+  @GetMapping("/statistics")
+  public ResponseEntity<StatisticsResponse> statistics() {
+    return ResponseEntity.ok(statisticsService.getStatistics());
+  }
 }
