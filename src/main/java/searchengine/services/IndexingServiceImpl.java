@@ -9,19 +9,19 @@ import searchengine.dto.indexing.IndexingResponseError;
 @Service
 @RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
-    private boolean isIndexing = false;
+    private final Indexer indexer;
 
     @Override
     public IndexingResponse start() {
-        IndexingResponse response = isIndexing ? new IndexingResponse() : new IndexingResponseError(true);
-        isIndexing = true;
+        IndexingResponse response = !indexer.isIndexing() ? new IndexingResponse() : new IndexingResponseError(true);
+        indexer.startIndexing();
         return response;
     }
 
     @Override
     public IndexingResponse stop() {
-        IndexingResponse response = isIndexing ? new IndexingResponse() : new IndexingResponseError(false);
-        isIndexing = false;
+        IndexingResponse response = indexer.isIndexing() ? new IndexingResponse() : new IndexingResponseError(false);
+        indexer.stopIndexing();
         return response;
     }
 }
