@@ -1,41 +1,23 @@
 package searchengine.services;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import searchengine.model.Site;
-import searchengine.model.SiteRepository;
-import searchengine.model.SiteStatus;
-
-import java.time.LocalDateTime;
+import searchengine.dto.data.SiteData;
 
 public class SiteIndexer {
-
-    private final Site site;
+    private final SiteData site;
     private volatile boolean isIndexing;
 
-    public SiteIndexer(String siteUrl, String siteName) {
-        site = new Site();
-        site.setUrl(siteUrl);
-        site.setName(siteName);
+    public SiteIndexer(String name, String url) {
+        this.site = new SiteData(url, name);
     }
 
-    public void startIndexing() {
+    public boolean startIndexing() {
         isIndexing = true;
-        site.setStatus(SiteStatus.INDEXING);
-        updateStatusTime();
+        return true;
     }
 
-    public void stopIndexing() {
-        if (isIndexing) {
-            ;
-        }
+    public boolean stopIndexing() {
+        isIndexing = false;
+        return true;
     }
 
-    public void updateStatusTime() {
-        site.setStatusTime(LocalDateTime.now());
-    }
-
-    public Site getSite() {
-        return site;
-    }
 }
