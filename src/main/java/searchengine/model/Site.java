@@ -5,6 +5,7 @@ import org.hibernate.Hibernate;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @ToString
@@ -16,7 +17,7 @@ import java.util.Objects;
 public class Site {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(name = "status", columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
     private SiteStatus status;
@@ -32,6 +33,9 @@ public class Site {
 
     @Column(name = "name", columnDefinition = "VARCHAR(255)", nullable = false)
     private String name;
+
+    @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<Page> pages;
 
     @Override
     public boolean equals(Object o) {
