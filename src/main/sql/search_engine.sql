@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Хост: db
--- Время создания: Мар 06 2023 г., 14:17
+-- Время создания: Мар 13 2023 г., 12:51
 -- Версия сервера: 8.0.32
 -- Версия PHP: 8.1.15
 
@@ -29,9 +29,9 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `index` (
   `id` int NOT NULL,
-  `page_id` int NOT NULL,
+  `rank` float NOT NULL,
   `lemma_id` int NOT NULL,
-  `rank` float NOT NULL
+  `page_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_ru_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -42,9 +42,9 @@ CREATE TABLE `index` (
 
 CREATE TABLE `lemma` (
   `id` int NOT NULL,
-  `site_id` int NOT NULL,
+  `frequency` int NOT NULL,
   `lemma` varchar(255) COLLATE utf8mb4_ru_0900_ai_ci NOT NULL,
-  `frequency` int NOT NULL
+  `site_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_ru_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -55,10 +55,10 @@ CREATE TABLE `lemma` (
 
 CREATE TABLE `page` (
   `id` int NOT NULL,
-  `site_id` int NOT NULL,
-  `path` text COLLATE utf8mb4_ru_0900_ai_ci NOT NULL,
   `code` int NOT NULL,
-  `content` mediumtext COLLATE utf8mb4_ru_0900_ai_ci NOT NULL
+  `content` mediumtext COLLATE utf8mb4_ru_0900_ai_ci NOT NULL,
+  `path` text COLLATE utf8mb4_ru_0900_ai_ci NOT NULL,
+  `site_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_ru_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -69,11 +69,11 @@ CREATE TABLE `page` (
 
 CREATE TABLE `site` (
   `id` int NOT NULL,
+  `last_error` text COLLATE utf8mb4_ru_0900_ai_ci,
+  `name` varchar(255) COLLATE utf8mb4_ru_0900_ai_ci NOT NULL,
   `status` enum('INDEXING','INDEXED','FAILED') COLLATE utf8mb4_ru_0900_ai_ci NOT NULL,
   `status_time` datetime NOT NULL,
-  `last_error` text COLLATE utf8mb4_ru_0900_ai_ci,
-  `url` varchar(255) COLLATE utf8mb4_ru_0900_ai_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8mb4_ru_0900_ai_ci NOT NULL
+  `url` varchar(255) COLLATE utf8mb4_ru_0900_ai_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_ru_0900_ai_ci;
 
 --
@@ -85,23 +85,23 @@ CREATE TABLE `site` (
 --
 ALTER TABLE `index`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `index_page_id_fk` (`page_id`),
-  ADD KEY `index_lemma_id_fk` (`lemma_id`);
+  ADD KEY `FK_INDEX_LEMMA_ID` (`lemma_id`),
+  ADD KEY `FK_INDEX_PAGE_ID` (`page_id`);
 
 --
 -- Индексы таблицы `lemma`
 --
 ALTER TABLE `lemma`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `lemma_site_id_fk` (`site_id`);
+  ADD KEY `FK_LEMMA_SITE_ID` (`site_id`);
 
 --
 -- Индексы таблицы `page`
 --
 ALTER TABLE `page`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `page_path_idx` (`path`(255)),
-  ADD KEY `page_fk_site_id` (`site_id`);
+  ADD KEY `IDX_PAGE_PATH` (`path`(512)),
+  ADD KEY `FK_PAGE_SITE_ID` (`site_id`);
 
 --
 -- Индексы таблицы `site`
@@ -145,20 +145,20 @@ ALTER TABLE `site`
 -- Ограничения внешнего ключа таблицы `index`
 --
 ALTER TABLE `index`
-  ADD CONSTRAINT `index_lemma_id_fk` FOREIGN KEY (`lemma_id`) REFERENCES `lemma` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `index_page_id_fk` FOREIGN KEY (`page_id`) REFERENCES `page` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `FK_INDEX_LEMMA_ID` FOREIGN KEY (`lemma_id`) REFERENCES `lemma` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `FK_INDEX_PAGE_ID` FOREIGN KEY (`page_id`) REFERENCES `page` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ограничения внешнего ключа таблицы `lemma`
 --
 ALTER TABLE `lemma`
-  ADD CONSTRAINT `lemma_site_id_fk` FOREIGN KEY (`site_id`) REFERENCES `site` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `FK_LEMMA_SITE_ID` FOREIGN KEY (`site_id`) REFERENCES `site` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ограничения внешнего ключа таблицы `page`
 --
 ALTER TABLE `page`
-  ADD CONSTRAINT `page_fk_site_id` FOREIGN KEY (`site_id`) REFERENCES `site` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `FK_PAGE_SITE_ID` FOREIGN KEY (`site_id`) REFERENCES `site` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

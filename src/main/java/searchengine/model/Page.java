@@ -6,9 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.Hibernate;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
 import java.util.Objects;
@@ -26,7 +23,7 @@ public class Page {
 
     @JsonIgnore
     @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "site_id", nullable = false, foreignKey = @ForeignKey(name = "FK_SITE_ID",
+    @JoinColumn(name = "site_id", nullable = false, foreignKey = @ForeignKey(name = "FK_PAGE_SITE_ID",
             foreignKeyDefinition = "FOREIGN KEY (site_id) REFERENCES site(id) on delete cascade on update cascade"))
     @ToString.Exclude
     private Site site;
@@ -37,7 +34,7 @@ public class Page {
     @Column(name = "code", nullable = false)
     private Integer code;
 
-    @Column(name = "content", columnDefinition = "TEXT", nullable = false)
+    @Column(name = "content", columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
 
     @Override
