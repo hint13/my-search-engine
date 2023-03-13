@@ -1,23 +1,34 @@
 package searchengine.services;
 
-import searchengine.dto.data.SiteData;
+import org.hibernate.service.spi.Stoppable;
+import searchengine.model.Site;
 
-public class SiteIndexer {
-    private final SiteData site;
+
+public class SiteIndexer implements Runnable, Stoppable {
+    private final Site site;
     private volatile boolean isIndexing;
 
-    public SiteIndexer(String name, String url) {
-        this.site = new SiteData(url, name);
+    public SiteIndexer(Site site) {
+        this.site = site;
     }
 
-    public boolean startIndexing() {
+    private boolean startIndexing() {
         isIndexing = true;
         return true;
     }
 
-    public boolean stopIndexing() {
+    private boolean stopIndexing() {
         isIndexing = false;
         return true;
     }
 
+    @Override
+    public void run() {
+        startIndexing();
+    }
+
+    @Override
+    public void stop() {
+        stopIndexing();
+    }
 }
