@@ -19,6 +19,7 @@ public class Site {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
     private SiteStatus status;
 
@@ -34,6 +35,7 @@ public class Site {
     @Column(name = "name", columnDefinition = "VARCHAR(255)", nullable = false)
     private String name;
 
+    @ToString.Exclude
     @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Page> pages;
 
