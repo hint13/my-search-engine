@@ -1,34 +1,29 @@
 package searchengine.services;
 
-import org.hibernate.service.spi.Stoppable;
 import searchengine.model.Site;
 
+import java.util.concurrent.ForkJoinPool;
 
-public class SiteIndexer implements Runnable, Stoppable {
+public class SiteIndexer implements Runnable {
     private final Site site;
-    private volatile boolean isIndexing;
+    private final ForkJoinPool pool;
 
     public SiteIndexer(Site site) {
         this.site = site;
+        int coreCount = Runtime.getRuntime().availableProcessors();
+        this.pool = new ForkJoinPool(coreCount);
     }
 
-    private boolean startIndexing() {
-        isIndexing = true;
-        return true;
+    private void startIndexing() {
+        // TODO: Add code for start ForkJoinPool(PageIndexer)
     }
 
-    private boolean stopIndexing() {
-        isIndexing = false;
-        return true;
+    private void stopIndexing() {
+        // TODO: Add code for manual thread interrupt
     }
 
     @Override
     public void run() {
         startIndexing();
-    }
-
-    @Override
-    public void stop() {
-        stopIndexing();
     }
 }

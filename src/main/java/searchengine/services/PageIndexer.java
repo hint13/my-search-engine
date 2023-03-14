@@ -1,25 +1,28 @@
 package searchengine.services;
 
-import searchengine.dto.data.PageData;
+import searchengine.model.Page;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveTask;
 
-public class PageIndexer extends RecursiveTask<Map<String, PageData>> {
+public class PageIndexer extends RecursiveTask<Map<String, Page>> {
+    private static volatile Set<String> urlCache = new ConcurrentSkipListSet<>();
     private final String siteUrl;
-    private final PageData page;
+    private final Page page;
 
-    private final Map<String, PageData> urls;
+    private final Map<String, Page> urls;
 
-    public PageIndexer(String siteUrl, PageData page) {
+    public PageIndexer(String siteUrl, Page page) {
         this.siteUrl = siteUrl;
         this.page = page;
         this.urls = new HashMap<>();
     }
 
     @Override
-    protected Map<String, PageData> compute() {
+    protected Map<String, Page> compute() {
         return null;
     }
 }
