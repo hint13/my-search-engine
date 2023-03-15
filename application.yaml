@@ -9,6 +9,11 @@ indexing-settings:
     - url: https://www.playback.ru
       name: PlayBack.Ru
 
+bot:
+  useragent: HintSearchBot/1.0.0
+  referrer: https://ya.ru/
+  timeout: 500
+
 server:
   port: 8080
 
