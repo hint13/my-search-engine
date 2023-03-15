@@ -18,11 +18,14 @@ public class SiteIndexer implements Runnable {
     }
 
     private void startIndexing() {
-        // TODO: Add code for start ForkJoinPool(PageIndexer)
+        log.info("siteIndexer(" + site.getUrl() + ")");
         try {
-            pool.invoke(new PageIndexer(site, "/"));
+            PageIndexer task = new PageIndexer();
+            task.init(site, "/");
+            pool.invoke(task);
+            log.info("Pool for site " + site.getName() + " started.");
         } catch (Exception ex) {
-            log.info(ex.getMessage());
+            log.error("Error start indexing for site " + site.getUrl() + ": " + ex.getMessage());
         }
     }
 
