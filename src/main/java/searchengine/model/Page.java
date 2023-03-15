@@ -49,4 +49,8 @@ public class Page {
     public int hashCode() {
         return getClass().hashCode();
     }
+
+    public String getFullPath() {
+        return site.getUrl() + path;
+    }
 }
