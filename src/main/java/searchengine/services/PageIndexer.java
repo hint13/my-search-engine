@@ -5,60 +5,78 @@ import org.apache.logging.log4j.Logger;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.springframework.beans.factory.annotation.Value;
-import searchengine.model.Page;
-import searchengine.model.Site;
+import org.jsoup.select.Elements;
+import searchengine.model.PageEntity;
+import searchengine.model.SiteEntity;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveTask;
 
 
-public class PageIndexer extends RecursiveTask<Map<String, Page>> {
+public class PageIndexer extends RecursiveTask<Integer> {
 //    @Value("${bot.useragent}")
     private static final String userAgent = "HintSearchBot/1.0.0";
 //    @Value("${bot.referrer}")
     private static final String referrer = "https://www.ya.ru";
+    //    @Value("${bot.timeout}")
+    private static final int timeout = 500;
     private static final Logger log = LogManager.getLogger();
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
-    private Page page;
+    private PageEntity page;
+    private String siteUrl;
 
-    private final Map<String, Page> urls;
+    private Integer urlsCount;
 
     public PageIndexer() {
-        this.urls = new HashMap<>();
+        urlsCount = 0;
     }
 
-    public void init(Site site, String pagePath) {
-        page = new Page();
+    public void init(SiteEntity site, String pagePath) {
+        page = new PageEntity();
         page.setSite(site);
         page.setPath(pagePath);
+        siteUrl = site.getUrl();
     }
 
     @Override
-    protected Map<String, Page> compute() {
-        Map<String, Page> result = new HashMap<>();
+    protected Integer compute() {
         String url = page.getFullPath();
         synchronized (urlCache) {
             if (urlCache.contains(url)) {
-                return result;
+                return 0;
             }
             urlCache.add(url);
         }
+        Set<String> links = new HashSet<>();
         try {
-            loadPage();
+            links = getFilteredUrls(loadPage());
         } catch (IOException ex) {
             log.warn("Error loading page " + page.getFullPath() + ": " + ex.getMessage());
-            return result;
+            return 0;
         }
-        result.put(page.getPath(), page);
-        return result;
+        urlsCount += 1;
+        List<PageIndexer> tasks = new LinkedList<>();
+        for (String link : links) {
+            PageIndexer task = new PageIndexer();
+            // FIXME - wrong parameter data for link. needed string without siteUrl!
+            task.init(page.getSite(), link);
+            try {
+                Thread.sleep(timeout);
+            } catch (InterruptedException e) {
+                log.error(e.getMessage());
+            }
+            task.fork();
+            tasks.add(task);
+        }
+        for (PageIndexer task : tasks) {
+            urlsCount += task.join();
+        }
+        return urlsCount;
     }
 
-    private void loadPage() throws IOException {
+    private Set<String> loadPage() throws IOException {
         Connection conn = Jsoup.connect(page.getFullPath())
                 .userAgent(userAgent)
                 .referrer(referrer);
@@ -69,5 +87,46 @@ public class PageIndexer extends RecursiveTask<Map<String, Page>> {
         Document doc = response.parse();
         page.setCode(response.statusCode());
         page.setContent(doc.toString());
+        return getLinksFromPageDoc(doc);
+    }
+
+    private Set<String> getLinksFromPageDoc(Document doc) {
+        Set<String> urls = new TreeSet<>();
+        if (doc == null) {
+            return urls;
+        }
+        Elements elements = doc.getElementsByTag("a");
+        elements.forEach(el -> {
+            String href = el.attr("abs:href");
+            if (href.startsWith(siteUrl)) {
+                urls.add(href);
+            }
+        });
+        return urls;
+    }
+
+    public Set<String> getFilteredUrls(Set<String> urls) {
+        Set<String> result = new TreeSet<>();
+        urls.stream()
+                .filter(u -> {
+                    String url = u.substring(siteUrl.length());
+                    return !(url.isEmpty() || url.charAt(0) != '/');
+                })
+                .forEach(u -> {
+                    String url = u.substring(siteUrl.length());
+                    String[] parts = url.split("/");
+                    StringJoiner buffer = new StringJoiner("/"); // .add(siteUrl)
+                    for (String part : parts) {
+                        if (part.equals("#") || part.equals("")) {
+                            continue;
+                        }
+                        buffer.add(part);
+                        String newUrl = buffer.toString();
+                        if (!urlCache.contains(newUrl)) {
+                            result.add(newUrl);
+                        }
+                    }
+                });
+        return result;
     }
 }

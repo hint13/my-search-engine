@@ -8,6 +8,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.indexing.IndexingResponseError;
+import searchengine.model.SiteEntity;
 import searchengine.model.SiteRepository;
 import searchengine.model.SiteStatus;
 
@@ -30,13 +31,12 @@ public class IndexingServiceImpl implements IndexingService {
     public IndexingServiceImpl(SiteRepository sites, SitesList sitesList) {
         isIndexing = new AtomicBoolean(false);
         siteIndexers = new LinkedList<>();
-
     }
 
     public void startIndexing() {
         isIndexing.set(true);
         for (Site site : sitesList.getSites()) {
-            searchengine.model.Site siteEntity = insertOrGetSite(site);
+            SiteEntity siteEntity = insertOrGetSite(site);
             SiteIndexer siteIndexer = new SiteIndexer(siteEntity);
             siteIndexers.add(new Thread(siteIndexer));
         }
@@ -45,12 +45,9 @@ public class IndexingServiceImpl implements IndexingService {
         }
     }
 
-    private searchengine.model.Site insertOrGetSite(Site site) {
-        Optional<searchengine.model.Site> entity = sites.findByUrlIgnoreCase(site.getUrl());
-        if (entity.isPresent()) {
-            return entity.get();
-        }
-        searchengine.model.Site siteEntity = new searchengine.model.Site();
+    private SiteEntity insertOrGetSite(Site site) {
+        Optional<SiteEntity> entity = sites.findByUrlIgnoreCase(site.getUrl());
+        SiteEntity siteEntity = entity.orElseGet(SiteEntity::new);
         siteEntity.setUrl(site.getUrl());
         siteEntity.setName(site.getName());
         siteEntity.setStatus(SiteStatus.INDEXING);
@@ -60,18 +57,6 @@ public class IndexingServiceImpl implements IndexingService {
         return siteEntity;
     }
 
-    public void stopIndexing() {
-        isIndexing.set(false);
-        for (Thread indexer : siteIndexers) {
-            if (indexer.isAlive()) {
-                log.info(indexer.getName());
-                ((SiteIndexer)indexer).stopIndexing();
-                indexer.interrupt();
-            }
-        }
-        siteIndexers.clear();
-    }
-
     @Override
     public IndexingResponse start() {
         IndexingResponse response = !isIndexing.get() ? new IndexingResponse() : new IndexingResponseError(true);
@@ -79,6 +64,17 @@ public class IndexingServiceImpl implements IndexingService {
             startIndexing();
         }
         return response;
+    }
+
+    public void stopIndexing() {
+        isIndexing.set(false);
+        for (Thread indexer : siteIndexers) {
+            if (indexer.isAlive()) {
+                log.info(indexer.getName());
+                indexer.interrupt();
+            }
+        }
+        siteIndexers.clear();
     }
 
     @Override
