@@ -1,5 +1,7 @@
 package searchengine.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
@@ -21,6 +23,7 @@ public class IndexingServiceImpl implements IndexingService {
     @Autowired private SiteRepository sites;
     @Autowired private SitesList sitesList;
 
+    private static final Logger log = LogManager.getLogger();
     private final List<Thread> siteIndexers;
     private final AtomicBoolean isIndexing;
 
@@ -61,9 +64,12 @@ public class IndexingServiceImpl implements IndexingService {
         isIndexing.set(false);
         for (Thread indexer : siteIndexers) {
             if (indexer.isAlive()) {
+                log.info(indexer.getName());
+                ((SiteIndexer)indexer).stopIndexing();
                 indexer.interrupt();
             }
         }
+        siteIndexers.clear();
     }
 
     @Override

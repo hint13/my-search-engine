@@ -6,7 +6,7 @@ import searchengine.model.Site;
 
 import java.util.concurrent.ForkJoinPool;
 
-public class SiteIndexer implements Runnable {
+public class SiteIndexer extends Thread {
     private final static Logger log = LogManager.getLogger();
     private final Site site;
     private final ForkJoinPool pool;
@@ -17,7 +17,7 @@ public class SiteIndexer implements Runnable {
         this.pool = new ForkJoinPool(coreCount);
     }
 
-    private void startIndexing() {
+    public void startIndexing() {
         log.info("siteIndexer(" + site.getUrl() + ")");
         try {
             PageIndexer task = new PageIndexer();
@@ -29,8 +29,9 @@ public class SiteIndexer implements Runnable {
         }
     }
 
-    private void stopIndexing() {
+    public void stopIndexing() {
         // TODO: Add code for manual thread interrupt
+        pool.shutdown();
     }
 
     @Override

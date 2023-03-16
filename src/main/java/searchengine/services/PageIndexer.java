@@ -5,9 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import searchengine.config.Bot;
+import org.springframework.beans.factory.annotation.Value;
 import searchengine.model.Page;
 import searchengine.model.Site;
 
@@ -18,10 +16,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveTask;
 
-@Component
-public class PageIndexer extends RecursiveTask<Map<String, Page>> {
-    @Autowired private static Bot bot;
 
+public class PageIndexer extends RecursiveTask<Map<String, Page>> {
+//    @Value("${bot.useragent}")
+    private static final String userAgent = "HintSearchBot/1.0.0";
+//    @Value("${bot.referrer}")
+    private static final String referrer = "https://www.ya.ru";
     private static final Logger log = LogManager.getLogger();
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
     private Page page;
@@ -32,11 +32,10 @@ public class PageIndexer extends RecursiveTask<Map<String, Page>> {
         this.urls = new HashMap<>();
     }
 
-    public PageIndexer init(Site site, String pagePath) {
+    public void init(Site site, String pagePath) {
         page = new Page();
         page.setSite(site);
         page.setPath(pagePath);
-        return this;
     }
 
     @Override
@@ -53,16 +52,22 @@ public class PageIndexer extends RecursiveTask<Map<String, Page>> {
             loadPage();
         } catch (IOException ex) {
             log.warn("Error loading page " + page.getFullPath() + ": " + ex.getMessage());
+            return result;
         }
         result.put(page.getPath(), page);
         return result;
     }
 
     private void loadPage() throws IOException {
-        Connection conn = Jsoup.connect(page.getFullPath());
-        conn.userAgent(bot.getUseragent());
-        conn.referrer(bot.getReferrer());
-        conn.timeout(bot.getTimeout());
-        Document doc = conn.get();
+        Connection conn = Jsoup.connect(page.getFullPath())
+                .userAgent(userAgent)
+                .referrer(referrer);
+        Connection.Response response = conn.execute();
+        if (response.statusCode() != 200) {
+            throw new IOException("Bad status code");
+        }
+        Document doc = response.parse();
+        page.setCode(response.statusCode());
+        page.setContent(doc.toString());
     }
 }
