@@ -4,13 +4,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface SiteRepository extends JpaRepository<Site, Integer> {
+public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
 
-    Optional<Site> findByUrlIgnoreCase(String url);
+    Optional<SiteEntity> findByUrlIgnoreCase(String url);
 
     @Override
     long count();
 
     @Override
-    Site save(Site entity);
+    SiteEntity save(SiteEntity entity);
 }

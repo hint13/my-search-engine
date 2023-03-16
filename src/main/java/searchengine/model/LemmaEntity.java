@@ -12,7 +12,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Entity
 @Table(name = "lemma")
-public class Lemma {
+public class LemmaEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -22,7 +22,7 @@ public class Lemma {
     @JoinColumn(name = "site_id", nullable = false, foreignKey = @ForeignKey(name = "FK_LEMMA_SITE_ID",
             foreignKeyDefinition = "FOREIGN KEY (site_id) REFERENCES site(id) on delete cascade on update cascade"))
     @ToString.Exclude
-    private Site site;
+    private SiteEntity site;
 
     @Column(name = "lemma", nullable = false)
     private String lemma;
@@ -33,7 +33,7 @@ public class Lemma {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Lemma lemma1)) return false;
+        if (!(o instanceof LemmaEntity lemma1)) return false;
         return getId().equals(lemma1.getId()) && getSite().equals(lemma1.getSite()) && getLemma().equals(lemma1.getLemma()) && getFrequency().equals(lemma1.getFrequency());
     }
 

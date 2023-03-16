@@ -14,7 +14,7 @@ import java.util.Objects;
 @Setter
 @Entity
 @Table(name = "site")
-public class Site {
+public class SiteEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -37,13 +37,13 @@ public class Site {
 
     @ToString.Exclude
     @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<Page> pages;
+    private List<PageEntity> pages;
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
-        Site site = (Site) o;
+        SiteEntity site = (SiteEntity) o;
         return getId() != null && Objects.equals(getId(), site.getId());
     }
 
