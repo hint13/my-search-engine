@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveTask;
+import java.util.stream.Collectors;
 
 
 public class PageIndexer extends RecursiveTask<Integer> {
@@ -49,13 +50,15 @@ public class PageIndexer extends RecursiveTask<Integer> {
             }
             urlCache.add(url);
         }
-        Set<String> links = new HashSet<>();
+        Set<String> links;
         try {
             links = getFilteredUrls(loadPage());
         } catch (IOException ex) {
             log.warn("Error loading page " + page.getFullPath() + ": " + ex.getMessage());
             return 0;
         }
+        // TODO: Save page to DB
+        // pagesRepository.save(page);
         urlsCount += 1;
         List<PageIndexer> tasks = new LinkedList<>();
         for (String link : links) {
@@ -102,31 +105,14 @@ public class PageIndexer extends RecursiveTask<Integer> {
                 urls.add(href);
             }
         });
-        return urls;
+        return getFilteredUrls(urls);
     }
 
-    public Set<String> getFilteredUrls(Set<String> urls) {
-        Set<String> result = new TreeSet<>();
-        urls.stream()
+    private Set<String> getFilteredUrls(Set<String> urls) {
+        return urls.stream()
                 .filter(u -> {
                     String url = u.substring(siteUrl.length());
                     return !(url.isEmpty() || url.charAt(0) != '/');
-                })
-                .forEach(u -> {
-                    String url = u.substring(siteUrl.length());
-                    String[] parts = url.split("/");
-                    StringJoiner buffer = new StringJoiner("/"); // .add(siteUrl)
-                    for (String part : parts) {
-                        if (part.equals("#") || part.equals("")) {
-                            continue;
-                        }
-                        buffer.add(part);
-                        String newUrl = buffer.toString();
-                        if (!urlCache.contains(newUrl)) {
-                            result.add(newUrl);
-                        }
-                    }
-                });
-        return result;
+                }).collect(Collectors.toSet());
     }
 }
