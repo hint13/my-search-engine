@@ -2,12 +2,14 @@
 
 indexing-settings:
   sites:
+    - url: http://localhost
+      name: Localhost Test Site
 #    - url: https://www.lenta.ru
 #      name: Лента.ру
 #    - url: https://www.skillbox.ru
 #      name: Skillbox
-    - url: https://www.playback.ru
-      name: PlayBack.Ru
+#    - url: https://www.playback.ru
+#      name: PlayBack.Ru
 
 bot:
   useragent: HintSearchBot/1.0.0

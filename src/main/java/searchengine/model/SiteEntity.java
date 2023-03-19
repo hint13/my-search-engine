@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
-@ToString
 @RequiredArgsConstructor
 @Getter
 @Setter
@@ -35,7 +34,6 @@ public class SiteEntity {
     @Column(name = "name", columnDefinition = "VARCHAR(255)", nullable = false)
     private String name;
 
-    @ToString.Exclude
     @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<PageEntity> pages;
 
@@ -50,5 +48,10 @@ public class SiteEntity {
     @Override
     public int hashCode() {
         return getClass().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "Site(<" + status + "> " + url + " [" + pages.size() + "])";
     }
 }

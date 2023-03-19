@@ -2,27 +2,38 @@ package searchengine.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.cfg.Environment;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import searchengine.model.PageEntity;
+import searchengine.model.PageRepository;
 import searchengine.model.SiteEntity;
+import searchengine.utils.UrlFilter;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-
+@Service
 public class PageIndexer extends RecursiveTask<Integer> {
-//    @Value("${bot.useragent}")
-    private static final String userAgent = "HintSearchBot/1.0.0";
-//    @Value("${bot.referrer}")
-    private static final String referrer = "https://www.ya.ru";
-    //    @Value("${bot.timeout}")
-    private static final int timeout = 500;
+    @Value("${bot.useragent}")
+    private String userAgent = "HintSearchBot/1.0.0";
+    @Value("${bot.referrer}")
+    private String referrer = "https://www.ya.ru";
+    @Value("${bot.timeout}")
+    private int timeout = 500;
+    private final PageRepository pageRepository;
     private static final Logger log = LogManager.getLogger();
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
     private PageEntity page;
@@ -30,8 +41,9 @@ public class PageIndexer extends RecursiveTask<Integer> {
 
     private Integer urlsCount;
 
-    public PageIndexer() {
+    public PageIndexer(PageRepository pageRepository) {
         urlsCount = 0;
+        this.pageRepository = pageRepository;
     }
 
     public void init(SiteEntity site, String pagePath) {
@@ -52,17 +64,18 @@ public class PageIndexer extends RecursiveTask<Integer> {
         }
         Set<String> links;
         try {
-            links = getFilteredUrls(loadPage());
+            links = loadPage();
         } catch (IOException ex) {
             log.warn("Error loading page " + page.getFullPath() + ": " + ex.getMessage());
             return 0;
         }
         // TODO: Save page to DB
-        // pagesRepository.save(page);
         urlsCount += 1;
+        page.setId(0);
+        pageRepository.save(page);
         List<PageIndexer> tasks = new LinkedList<>();
         for (String link : links) {
-            PageIndexer task = new PageIndexer();
+            PageIndexer task = new PageIndexer(pageRepository);
             // FIXME - wrong parameter data for link. needed string without siteUrl!
             task.init(page.getSite(), link);
             try {
@@ -110,9 +123,7 @@ public class PageIndexer extends RecursiveTask<Integer> {
 
     private Set<String> getFilteredUrls(Set<String> urls) {
         return urls.stream()
-                .filter(u -> {
-                    String url = u.substring(siteUrl.length());
-                    return !(url.isEmpty() || url.charAt(0) != '/');
-                }).collect(Collectors.toSet());
+                .map(u -> UrlFilter.filter(u.substring(siteUrl.length())))
+                .collect(Collectors.toSet());
     }
 }

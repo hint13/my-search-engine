@@ -8,6 +8,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.indexing.IndexingResponseError;
+import searchengine.model.PageRepository;
 import searchengine.model.SiteEntity;
 import searchengine.model.SiteRepository;
 import searchengine.model.SiteStatus;
@@ -22,13 +23,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 public class IndexingServiceImpl implements IndexingService {
     @Autowired private SiteRepository sites;
+    @Autowired private PageRepository pages;
     @Autowired private SitesList sitesList;
 
     private static final Logger log = LogManager.getLogger();
     private final List<Thread> siteIndexers;
     private final AtomicBoolean isIndexing;
 
-    public IndexingServiceImpl(SiteRepository sites, SitesList sitesList) {
+    public IndexingServiceImpl(SiteRepository sites, PageRepository pages, SitesList sitesList) {
         isIndexing = new AtomicBoolean(false);
         siteIndexers = new LinkedList<>();
     }
@@ -37,7 +39,7 @@ public class IndexingServiceImpl implements IndexingService {
         isIndexing.set(true);
         for (Site site : sitesList.getSites()) {
             SiteEntity siteEntity = insertOrGetSite(site);
-            SiteIndexer siteIndexer = new SiteIndexer(siteEntity);
+            SiteIndexer siteIndexer = new SiteIndexer(siteEntity, pages);
             siteIndexers.add(new Thread(siteIndexer));
         }
         for (Thread indexer : siteIndexers) {

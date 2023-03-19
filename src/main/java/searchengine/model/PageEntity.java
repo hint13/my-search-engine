@@ -10,7 +10,6 @@ import org.hibernate.Hibernate;
 import jakarta.persistence.*;
 import java.util.Objects;
 
-@ToString
 @RequiredArgsConstructor
 @Getter
 @Setter
@@ -25,7 +24,6 @@ public class PageEntity {
     @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "site_id", nullable = false, foreignKey = @ForeignKey(name = "FK_PAGE_SITE_ID",
             foreignKeyDefinition = "FOREIGN KEY (site_id) REFERENCES site(id) on delete cascade on update cascade"))
-    @ToString.Exclude
     private SiteEntity site;
 
     @Column(name = "path", columnDefinition = "TEXT NOT NULL, INDEX IDX_PAGE_PATH (path(512))")
@@ -48,6 +46,13 @@ public class PageEntity {
     @Override
     public int hashCode() {
         return getClass().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "Page(" +
+                "<" + code + "> " +
+                getFullPath() + ")";
     }
 
     public String getFullPath() {

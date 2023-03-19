@@ -2,17 +2,20 @@ package searchengine.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import searchengine.model.PageRepository;
 import searchengine.model.SiteEntity;
 
 import java.util.concurrent.ForkJoinPool;
 
 public class SiteIndexer implements Runnable {
     private final static Logger log = LogManager.getLogger();
+    private final PageRepository pageRepository;
     private final SiteEntity site;
     private final ForkJoinPool pool;
 
-    public SiteIndexer(SiteEntity site) {
+    public SiteIndexer(SiteEntity site, PageRepository pageRepository) {
         this.site = site;
+        this.pageRepository = pageRepository;
         int coreCount = Runtime.getRuntime().availableProcessors();
         this.pool = new ForkJoinPool(coreCount);
     }
@@ -20,7 +23,7 @@ public class SiteIndexer implements Runnable {
     public void startIndexing() {
         log.info("siteIndexer(" + site.getUrl() + ")");
         try {
-            PageIndexer task = new PageIndexer();
+            PageIndexer task = new PageIndexer(pageRepository);
             task.init(site, "/");
             log.info("Pool for site " + site.getName() + " started.");
             int count = pool.invoke(task);
