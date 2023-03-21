@@ -123,7 +123,7 @@ public class PageIndexer extends RecursiveTask<Integer> {
 
     private Set<String> getFilteredUrls(Set<String> urls) {
         return urls.stream()
-                .map(u -> UrlFilter.filter(u.substring(siteUrl.length())))
+                .map(u -> UrlFilter.filter(u.substring(siteUrl.length()), true))
                 .collect(Collectors.toSet());
     }
 }

@@ -1,5 +1,6 @@
 package searchengine.services;
 
+import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,10 +9,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.indexing.IndexingResponseError;
-import searchengine.model.PageRepository;
-import searchengine.model.SiteEntity;
-import searchengine.model.SiteRepository;
-import searchengine.model.SiteStatus;
+import searchengine.model.*;
 
 import java.time.LocalDateTime;
 import java.util.LinkedList;
@@ -35,10 +33,11 @@ public class IndexingServiceImpl implements IndexingService {
         siteIndexers = new LinkedList<>();
     }
 
-    public void startIndexing() {
+    private void startIndexing() {
         isIndexing.set(true);
         for (Site site : sitesList.getSites()) {
             SiteEntity siteEntity = insertOrGetSite(site);
+            deletePagesBySiteId(siteEntity);
             SiteIndexer siteIndexer = new SiteIndexer(siteEntity, pages);
             siteIndexers.add(new Thread(siteIndexer));
         }
@@ -56,7 +55,17 @@ public class IndexingServiceImpl implements IndexingService {
         siteEntity.setStatusTime(LocalDateTime.now());
         siteEntity.setLastError("");
         sites.save(siteEntity);
+        sites.flush();
         return siteEntity;
+    }
+
+    private void deletePagesBySiteId(SiteEntity site) {
+        log.info("delete Pages by siteId: " + site.getId());
+        List<PageEntity> pageEntityList = site.getPages();
+        if (pageEntityList != null) {
+            pages.deleteAllInBatch(pageEntityList);
+            pages.flush();
+        }
     }
 
     @Override
@@ -68,7 +77,7 @@ public class IndexingServiceImpl implements IndexingService {
         return response;
     }
 
-    public void stopIndexing() {
+    private void stopIndexing() {
         isIndexing.set(false);
         for (Thread indexer : siteIndexers) {
             if (indexer.isAlive()) {
