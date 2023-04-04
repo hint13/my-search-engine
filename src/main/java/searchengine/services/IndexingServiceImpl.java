@@ -1,6 +1,5 @@
 package searchengine.services;
 
-import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -25,12 +25,14 @@ public class IndexingServiceImpl implements IndexingService {
     @Autowired private SitesList sitesList;
 
     private static final Logger log = LogManager.getLogger();
-    private final List<Thread> siteIndexers;
+    private final List<FutureTask<SiteEntity>> siteIndexers;
+    private final Executor executor;
     private final AtomicBoolean isIndexing;
 
     public IndexingServiceImpl(SiteRepository sites, PageRepository pages, SitesList sitesList) {
         isIndexing = new AtomicBoolean(false);
         siteIndexers = new LinkedList<>();
+        executor = Executors.newFixedThreadPool(sitesList.getSites().size());
     }
 
     private void startIndexing() {
@@ -38,12 +40,30 @@ public class IndexingServiceImpl implements IndexingService {
         for (Site site : sitesList.getSites()) {
             SiteEntity siteEntity = insertOrGetSite(site);
             deletePagesBySiteId(siteEntity);
-            SiteIndexer siteIndexer = new SiteIndexer(siteEntity, pages);
-            siteIndexers.add(new Thread(siteIndexer));
+            FutureTask<SiteEntity> siteIndexer = new FutureTask<>(new SiteIndexer(siteEntity, pages));
+            siteIndexers.add(siteIndexer);
+            executor.execute(siteIndexer);
         }
-        for (Thread indexer : siteIndexers) {
-            indexer.start();
-        }
+//        while (true) {
+//            AtomicBoolean isAllDone = new AtomicBoolean(false);
+//            siteIndexers.forEach(s -> isAllDone.set(isAllDone.get() & s.isDone()));
+//            if (isAllDone.get()) {
+//                for (FutureTask<SiteEntity> indexer : siteIndexers) {
+//                    SiteEntity site;
+//                    try {
+//                        site = indexer.get();
+//                        sites.saveAndFlush(site);
+//                    } catch (InterruptedException e) {
+//                        log.error("Indexer interrupted: " + e.getMessage());
+//                    } catch (ExecutionException e) {
+//                        log.error("Error indexer execution: " + e.getMessage());
+//                    }
+//                }
+//                ((ThreadPoolExecutor)executor).shutdown();
+//                log.info("All indexing is done.");
+//                return;
+//            }
+//        }
     }
 
     private SiteEntity insertOrGetSite(Site site) {
@@ -60,9 +80,9 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private void deletePagesBySiteId(SiteEntity site) {
-        log.info("delete Pages by siteId: " + site.getId());
-        List<PageEntity> pageEntityList = site.getPages();
-        if (pageEntityList != null) {
+        List<PageEntity> pageEntityList = pages.findAllBySiteId(site.getId());
+        if (!pageEntityList.isEmpty()) {
+            log.info("delete Pages by siteId: " + site.getId() + "(" + pageEntityList.size() + ")");
             pages.deleteAllInBatch(pageEntityList);
             pages.flush();
         }
@@ -79,12 +99,13 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void stopIndexing() {
         isIndexing.set(false);
-        for (Thread indexer : siteIndexers) {
-            if (indexer.isAlive()) {
-                log.info(indexer.getName());
-                indexer.interrupt();
-            }
-        }
+        // for (Thread indexer : siteIndexers) {
+        //     if (indexer.isAlive()) {
+        //         log.info(indexer.getName());
+        //         indexer.interrupt();
+        //     }
+        // }
+        ((ThreadPoolExecutor)executor).shutdown();
         siteIndexers.clear();
     }
 

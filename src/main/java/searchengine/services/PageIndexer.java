@@ -32,7 +32,7 @@ public class PageIndexer extends RecursiveTask<Integer> {
     @Value("${bot.referrer}")
     private String referrer = "https://www.ya.ru";
     @Value("${bot.timeout}")
-    private int timeout = 500;
+    private int timeout = 250;
     private final PageRepository pageRepository;
     private static final Logger log = LogManager.getLogger();
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();

@@ -4,10 +4,10 @@ indexing-settings:
   sites:
     - url: http://localhost
       name: Localhost Test Site
-#    - url: https://www.lenta.ru
-#      name: Лента.ру
-#    - url: https://www.skillbox.ru
-#      name: Skillbox
+    - url: https://www.lenta.ru
+      name: Лента.ру
+    - url: https://skillbox.ru
+      name: Skillbox
 #    - url: https://www.playback.ru
 #      name: PlayBack.Ru
 
@@ -20,6 +20,9 @@ server:
   port: 8080
 
 spring:
+  output:
+    ansi:
+      enabled: always
   datasource:
     username: sebot
     password: rtnnfhb#13
