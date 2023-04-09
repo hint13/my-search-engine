@@ -19,33 +19,33 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
 
-    private final SitesList sites;
-    private final SiteRepository siteRepo;
+    private final SitesList sitesConfig;
+    private final SiteRepository sites;
 
     @Override
     public StatisticsResponse getStatistics() {
 
         TotalStatistics total = new TotalStatistics();
-        total.setSites(sites.getSites().size());
+        total.setSites(sitesConfig.getSites().size());
         total.setIndexing(false);
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
-        for (Site site : sites.getSites()) {
-            Optional<SiteEntity> entity = siteRepo.findByUrlIgnoreCase(site.getUrl());
+        for (Site site : sitesConfig.getSites()) {
+            Optional<SiteEntity> entity = sites.findByUrlIgnoreCase(site.getUrl());
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             item.setName(site.getName());
             item.setUrl(site.getUrl());
             if (entity.isPresent()) {
                 SiteEntity siteEntity = entity.get();
-                int pages = siteRepo.countPagesBySiteId(siteEntity.getId());
-                int lemmas = siteRepo.countLemmasBySiteId(siteEntity.getId());
-                item.setPages(pages);
-                item.setLemmas(lemmas);
+                int pagesCount = sites.countPagesBySiteId(siteEntity.getId());
+                int lemmasCount = sites.countLemmasBySiteId(siteEntity.getId());
+                item.setPages(pagesCount);
+                item.setLemmas(lemmasCount);
                 item.setStatus(siteEntity.getStatus().toString());
                 item.setError(siteEntity.getLastError());
                 item.setStatusTimeFromLocalDateTime(siteEntity.getStatusTime());
-                total.setPages(total.getPages() + pages);
-                total.setLemmas(total.getLemmas() + lemmas);
+                total.setPages(total.getPages() + pagesCount);
+                total.setLemmas(total.getLemmas() + lemmasCount);
             }
             detailed.add(item);
         }

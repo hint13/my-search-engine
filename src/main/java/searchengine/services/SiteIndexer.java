@@ -2,43 +2,46 @@ package searchengine.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import searchengine.config.Bot;
 import searchengine.model.PageRepository;
 import searchengine.model.SiteEntity;
 import searchengine.model.SiteStatus;
 
 import java.util.concurrent.*;
 
-public class SiteIndexer implements Callable<SiteEntity> {
+public class SiteIndexer implements RunnableFuture<Integer> {
     private final static Logger log = LogManager.getLogger();
-    private final PageRepository pageRepository;
+    private final PageRepository pages;
+    private final Bot botConfig;
     private final SiteEntity site;
     private final ForkJoinPool pool;
 
-    public SiteIndexer(SiteEntity site, PageRepository pageRepository) {
+    public SiteIndexer(SiteEntity site, PageRepository pages, Bot botConfig) {
         this.site = site;
-        this.pageRepository = pageRepository;
+        this.pages = pages;
         int coreCount = Runtime.getRuntime().availableProcessors();
         this.pool = new ForkJoinPool(coreCount);
+        this.botConfig = botConfig;
     }
 
     public SiteEntity getSite() {
         return site;
     }
 
-    public SiteEntity startIndexing() {
+    public void startIndexing() {
         log.info("siteIndexer(" + site.getUrl() + ")");
         try {
-            PageIndexer task = new PageIndexer(pageRepository);
+            PageIndexer task = new PageIndexer(botConfig, pages);
             task.init(site, "/");
             log.info("Pool for site " + site.getName() + " started.");
-            int count = pool.invoke(task);
+            int count = pool. invoke(task);
             stopIndexing();
             site.setStatus(SiteStatus.INDEXED);
             log.info("Pool for site " + site.getName() + " finished. Parsed " + count + " urls.");
         } catch (Exception ex) {
             log.error("Error start indexing for site " + site.getUrl() + ": " + ex.getMessage());
         }
-        return site;
     }
 
     public void stopIndexing() {
@@ -46,9 +49,33 @@ public class SiteIndexer implements Callable<SiteEntity> {
         pool.shutdownNow();
     }
 
+    @Override
+    public void run() {
+        startIndexing();
+    }
 
     @Override
-    public SiteEntity call() {
-        return startIndexing();
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return false;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return false;
+    }
+
+    @Override
+    public Integer get() throws InterruptedException, ExecutionException {
+        return null;
+    }
+
+    @Override
+    public Integer get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        return null;
     }
 }

@@ -17,7 +17,7 @@ import java.util.Random;
 public class StatisticsServiceRandom implements StatisticsService {
 
     private final Random random = new Random();
-    private final SitesList sites;
+    private final SitesList sitesConfig;
 
     @Override
     public StatisticsResponse getStatistics() {
@@ -29,11 +29,11 @@ public class StatisticsServiceRandom implements StatisticsService {
         };
 
         TotalStatistics total = new TotalStatistics();
-        total.setSites(sites.getSites().size());
+        total.setSites(sitesConfig.getSites().size());
         total.setIndexing(true);
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
-        List<Site> sitesList = sites.getSites();
+        List<Site> sitesList = sitesConfig.getSites();
         for(int i = 0; i < sitesList.size(); i++) {
             Site site = sitesList.get(i);
             DetailedStatisticsItem item = new DetailedStatisticsItem();

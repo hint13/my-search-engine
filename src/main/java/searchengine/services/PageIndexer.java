@@ -6,8 +6,8 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+
+import searchengine.config.Bot;
 import searchengine.model.PageEntity;
 import searchengine.model.PageRepository;
 import searchengine.model.SiteEntity;
@@ -19,15 +19,9 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
 
-@Service
 public class PageIndexer extends RecursiveTask<Integer> {
-    @Value("${bot.useragent}")
-    private String userAgent = "HintSearchBot/1.0.0";
-    @Value("${bot.referrer}")
-    private String referrer = "https://www.ya.ru";
-    @Value("${bot.timeout}")
-    private int timeout = 250;
-    private final PageRepository pageRepository;
+    private final Bot botConfig;
+    private final PageRepository pages;
     private static final Logger log = LogManager.getLogger();
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
     private PageEntity page;
@@ -35,9 +29,10 @@ public class PageIndexer extends RecursiveTask<Integer> {
 
     private Integer urlsCount;
 
-    public PageIndexer(PageRepository pageRepository) {
+    public PageIndexer(Bot botConfig, PageRepository pages) {
         urlsCount = 0;
-        this.pageRepository = pageRepository;
+        this.pages = pages;
+        this.botConfig = botConfig;
     }
 
     public void init(SiteEntity site, String pagePath) {
@@ -63,17 +58,15 @@ public class PageIndexer extends RecursiveTask<Integer> {
             log.warn("Error loading page " + page.getFullPath() + ": " + ex.getMessage());
             return 0;
         }
-        // TODO: Save page to DB
         urlsCount += 1;
         page.setId(0);
-        pageRepository.save(page);
+        pages.save(page);
         List<PageIndexer> tasks = new LinkedList<>();
         for (String link : links) {
-            PageIndexer task = new PageIndexer(pageRepository);
-            // FIXME - wrong parameter data for link. needed string without siteUrl!
+            PageIndexer task = new PageIndexer(botConfig, pages);
             task.init(page.getSite(), link);
             try {
-                Thread.sleep(timeout);
+                Thread.sleep(botConfig.getTimeout());
             } catch (InterruptedException e) {
                 log.error(e.getMessage());
             }
@@ -88,8 +81,8 @@ public class PageIndexer extends RecursiveTask<Integer> {
 
     private Set<String> loadPage() throws IOException {
         Connection conn = Jsoup.connect(page.getFullPath())
-                .userAgent(userAgent)
-                .referrer(referrer);
+                .userAgent(botConfig.getUseragent())
+                .referrer(botConfig.getReferrer());
         Connection.Response response = conn.execute();
         if (response.statusCode() != 200) {
             throw new IOException("Bad status code");

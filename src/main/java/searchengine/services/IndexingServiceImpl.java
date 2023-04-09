@@ -4,6 +4,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import searchengine.config.Bot;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.IndexingResponse;
@@ -22,48 +24,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class IndexingServiceImpl implements IndexingService {
     @Autowired private SiteRepository sites;
     @Autowired private PageRepository pages;
-    @Autowired private SitesList sitesList;
+    @Autowired private SitesList sitesConfig;
+    @Autowired private Bot botConfig;
 
     private static final Logger log = LogManager.getLogger();
-    private final List<FutureTask<SiteEntity>> siteIndexers;
-    private final Executor executor;
+    private final ExecutorService executor;
+    private final List<Future<Integer>> siteIndexers;
     private final AtomicBoolean isIndexing;
 
-    public IndexingServiceImpl(SiteRepository sites, PageRepository pages, SitesList sitesList) {
+    public IndexingServiceImpl(SiteRepository sites, PageRepository pages, SitesList sitesConfig, Bot botConfig) {
         isIndexing = new AtomicBoolean(false);
         siteIndexers = new LinkedList<>();
-        executor = Executors.newFixedThreadPool(sitesList.getSites().size());
+        executor = Executors.newWorkStealingPool(sitesConfig.getSites().size());
     }
 
-    private void startIndexing() {
+    private void start() {
         isIndexing.set(true);
-        for (Site site : sitesList.getSites()) {
+        for (Site site : sitesConfig.getSites()) {
             SiteEntity siteEntity = insertOrGetSite(site);
             deletePagesBySiteId(siteEntity);
-            FutureTask<SiteEntity> siteIndexer = new FutureTask<>(new SiteIndexer(siteEntity, pages));
-            siteIndexers.add(siteIndexer);
-            executor.execute(siteIndexer);
+            siteIndexers.add((Future<Integer>) executor.submit(new SiteIndexer(siteEntity, pages, botConfig)));
         }
-//        while (true) {
-//            AtomicBoolean isAllDone = new AtomicBoolean(false);
-//            siteIndexers.forEach(s -> isAllDone.set(isAllDone.get() & s.isDone()));
-//            if (isAllDone.get()) {
-//                for (FutureTask<SiteEntity> indexer : siteIndexers) {
-//                    SiteEntity site;
-//                    try {
-//                        site = indexer.get();
-//                        sites.saveAndFlush(site);
-//                    } catch (InterruptedException e) {
-//                        log.error("Indexer interrupted: " + e.getMessage());
-//                    } catch (ExecutionException e) {
-//                        log.error("Error indexer execution: " + e.getMessage());
-//                    }
-//                }
-//                ((ThreadPoolExecutor)executor).shutdown();
-//                log.info("All indexing is done.");
-//                return;
-//            }
-//        }
     }
 
     private SiteEntity insertOrGetSite(Site site) {
@@ -89,31 +70,25 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     @Override
-    public IndexingResponse start() {
+    public IndexingResponse startIndexing() {
         IndexingResponse response = !isIndexing.get() ? new IndexingResponse() : new IndexingResponseError(true);
         if (!isIndexing.get()) {
-            startIndexing();
+            start();
         }
         return response;
     }
 
-    private void stopIndexing() {
+    private void stop() {
         isIndexing.set(false);
-        // for (Thread indexer : siteIndexers) {
-        //     if (indexer.isAlive()) {
-        //         log.info(indexer.getName());
-        //         indexer.interrupt();
-        //     }
-        // }
-        ((ThreadPoolExecutor)executor).shutdown();
+        executor.shutdown();
         siteIndexers.clear();
     }
 
     @Override
-    public IndexingResponse stop() {
+    public IndexingResponse stopIndexing() {
         IndexingResponse response = isIndexing.get() ? new IndexingResponse() : new IndexingResponseError(false);
         if (isIndexing.get()) {
-            stopIndexing();
+            stop();
         }
         return response;
     }
