@@ -34,8 +34,12 @@ public class SiteIndexer implements RunnableFuture<Integer> {
         try {
             PageIndexer task = new PageIndexer(botConfig, pages);
             task.init(site, "/");
+            PageIndexer.clearUrlCacheForSite(site.getUrl());
             log.info("Pool for site " + site.getName() + " started.");
-            int count = pool. invoke(task);
+            /* TODO: Добавить код для циклического опроса результата индексирования,
+             * а также отслеживание принудительной отмены индексиирования
+             */
+            int count = pool.invoke(task);
             stopIndexing();
             site.setStatus(SiteStatus.INDEXED);
             log.info("Pool for site " + site.getName() + " finished. Parsed " + count + " urls.");

@@ -20,10 +20,12 @@ import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
 
 public class PageIndexer extends RecursiveTask<Integer> {
+    private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
+
     private final Bot botConfig;
     private final PageRepository pages;
     private static final Logger log = LogManager.getLogger();
-    private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
+
     private PageEntity page;
     private String siteUrl;
 
@@ -40,6 +42,32 @@ public class PageIndexer extends RecursiveTask<Integer> {
         page.setSite(site);
         page.setPath(pagePath);
         siteUrl = site.getUrl();
+    }
+
+    static void addUrlToCache(String url) {
+        synchronized (urlCache) {
+            urlCache.add(url);
+        }
+    }
+
+    static Set<String> getUrlCache() {
+        synchronized (urlCache) {
+            return urlCache;
+        }
+    }
+
+    public static void clearUrlCache() {
+        synchronized (urlCache) {
+            urlCache.clear();
+        }
+    }
+
+    public static void clearUrlCacheForSite(String siteUrl) {
+        synchronized (urlCache) {
+            urlCache.stream()
+                    .filter(url -> url.startsWith(siteUrl))
+                    .forEach(urlCache::remove);
+        }
     }
 
     @Override
