@@ -20,11 +20,11 @@ import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
 
 public class PageIndexer extends RecursiveTask<Integer> {
+    private static final Logger log = LogManager.getLogger(PageIndexer.class);
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
 
     private final Bot botConfig;
     private final PageRepository pages;
-    private static final Logger log = LogManager.getLogger();
 
     private PageEntity page;
     private String siteUrl;
@@ -97,13 +97,25 @@ public class PageIndexer extends RecursiveTask<Integer> {
                 Thread.sleep(botConfig.getTimeout());
             } catch (InterruptedException e) {
                 log.error(e.getMessage());
+                return 0;
             }
             task.fork();
             tasks.add(task);
         }
-        for (PageIndexer task : tasks) {
-            urlsCount += task.join();
-        }
+        int count = 0;
+        do {
+            for (PageIndexer task : tasks) {
+                if (isCancelled()) {
+                    if (!task.isCancelled() && !task.isDone()) {
+                        task.cancel(true);
+                        count++;
+                    }
+                } else if (task.isDone()) {
+                    count++;
+                    urlsCount += task.join();
+                }
+            }
+        } while (count >= tasks.size());
         return urlsCount;
     }
 

@@ -2,19 +2,19 @@
 
 indexing-settings:
   sites:
-    - url: http://localhost
-      name: Localhost Test Site
-    # - url: https://www.lenta.ru
-    #   name: Лента.ру
-    # - url: https://skillbox.ru
-    #   name: Skillbox
-    # - url: https://www.playback.ru
-    #   name: PlayBack.Ru
+#    - url: http://localhost
+#      name: Localhost Test Site
+    - url: https://lenta.ru
+      name: Лента.ру
+#    - url: https://skillbox.ru
+#      name: Skillbox
+#    - url: https://www.playback.ru
+#      name: PlayBack.Ru
 
 bot:
   useragent: HintSearchBot/1.0.0
   referrer: https://ya.ru/
-  timeout: 500
+  timeout: 150
 
 server:
   port: 8080
@@ -34,3 +34,11 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+logging:
+  level:
+    searchengine:
+      services:
+        IndexingServiceImpl: DEBUG
+        SiteIndexer: DEBUG
+        PageIndexer: DEBUG

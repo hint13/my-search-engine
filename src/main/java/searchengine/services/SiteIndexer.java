@@ -6,51 +6,39 @@ import org.apache.logging.log4j.Logger;
 import searchengine.config.Bot;
 import searchengine.model.PageRepository;
 import searchengine.model.SiteEntity;
+import searchengine.model.SiteRepository;
 import searchengine.model.SiteStatus;
 
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class SiteIndexer implements RunnableFuture<Integer> {
-    private final static Logger log = LogManager.getLogger();
+public class SiteIndexer extends Thread {
+    private final static Logger log = LogManager.getLogger(SiteIndexer.class);
+
+    private final SiteRepository sites;
     private final PageRepository pages;
     private final Bot botConfig;
+
     private final SiteEntity site;
     private final ForkJoinPool pool;
+    private final AtomicBoolean isIndexing;
 
-    public SiteIndexer(SiteEntity site, PageRepository pages, Bot botConfig) {
+    public SiteIndexer(SiteEntity site, SiteRepository sites,  PageRepository pages, Bot botConfig) {
         this.site = site;
+        this.sites = sites;
         this.pages = pages;
         int coreCount = Runtime.getRuntime().availableProcessors();
         this.pool = new ForkJoinPool(coreCount);
         this.botConfig = botConfig;
+        isIndexing = new AtomicBoolean(false);
     }
 
-    public SiteEntity getSite() {
-        return site;
+    public boolean isIndexing() {
+        return isIndexing.get();
     }
 
-    public void startIndexing() {
-        log.info("siteIndexer(" + site.getUrl() + ")");
-        try {
-            PageIndexer task = new PageIndexer(botConfig, pages);
-            task.init(site, "/");
-            PageIndexer.clearUrlCacheForSite(site.getUrl());
-            log.info("Pool for site " + site.getName() + " started.");
-            /* TODO: Добавить код для циклического опроса результата индексирования,
-             * а также отслеживание принудительной отмены индексиирования
-             */
-            int count = pool.invoke(task);
-            stopIndexing();
-            site.setStatus(SiteStatus.INDEXED);
-            log.info("Pool for site " + site.getName() + " finished. Parsed " + count + " urls.");
-        } catch (Exception ex) {
-            log.error("Error start indexing for site " + site.getUrl() + ": " + ex.getMessage());
-        }
-    }
-
-    public void stopIndexing() {
-        // TODO: Add code for manual thread interrupt
-        pool.shutdownNow();
+    private void isIndexing(boolean status) {
+        isIndexing.set(status);
     }
 
     @Override
@@ -58,28 +46,50 @@ public class SiteIndexer implements RunnableFuture<Integer> {
         startIndexing();
     }
 
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
+    public SiteEntity getSite() {
+        return site;
     }
 
-    @Override
-    public boolean isCancelled() {
-        return false;
+    public void startIndexing() {
+        log.debug("siteIndexer(" + site.getUrl() + ")");
+        isIndexing(true);
+        PageIndexer task = new PageIndexer(botConfig, pages);
+        task.init(site, "/");
+        PageIndexer.clearUrlCacheForSite(site.getUrl());
+        log.debug("Pool for site " + site.getName() + " started.");
+        ForkJoinTask<Integer> futureTask = pool.submit(task);
+        do {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                site.setLastError("Индексация остановлена пользователем");
+                site.setStatus(SiteStatus.FAILED);
+                sites.saveAndFlush(site);
+                log.error("Thread for site " + site.getName() + ": " + e.getMessage());
+                stopIndexing();
+                return;
+            }
+        } while (pool.getRunningThreadCount() > 0);
+        int count = 0;
+        try {
+            count = futureTask.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.debug(e.getMessage());
+        }
+        stopIndexing();
+        site.setStatus(SiteStatus.INDEXED);
+        sites.saveAndFlush(site);
+        log.debug("Pool for site " + site.getName() + " finished. Parsed " + count + " urls.");
     }
 
-    @Override
-    public boolean isDone() {
-        return false;
+    public void stopIndexing() {
+        // TODO: Add code for manual thread interrupt
+        log.debug("Stop indexing process for site " + site.getName());
+        isIndexing(false);
+        if (pool.getActiveThreadCount() > 0) {
+            pool.shutdownNow();
+        }
     }
 
-    @Override
-    public Integer get() throws InterruptedException, ExecutionException {
-        return null;
-    }
 
-    @Override
-    public Integer get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        return null;
-    }
 }
