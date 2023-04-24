@@ -62,30 +62,34 @@ public class SiteIndexer extends Thread {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                site.setLastError("Индексация остановлена пользователем");
-                site.setStatus(SiteStatus.FAILED);
-                sites.saveAndFlush(site);
-                log.error("Thread for site " + site.getName() + ": " + e.getMessage());
-                stopIndexing();
+                log.warn("Thread for site " + site.getName() + ": " + e.getMessage());
+                stopIndexing(false);
                 return;
             }
         } while (pool.getRunningThreadCount() > 0);
-        int count = 0;
+        int count;
         try {
             count = futureTask.get();
         } catch (InterruptedException | ExecutionException e) {
-            log.debug(e.getMessage());
+            log.warn(e.getMessage());
+            stopIndexing(false);
+            return;
         }
-        stopIndexing();
-        site.setStatus(SiteStatus.INDEXED);
-        sites.saveAndFlush(site);
+        stopIndexing(true);
         log.debug("Pool for site " + site.getName() + " finished. Parsed " + count + " urls.");
     }
 
-    public void stopIndexing() {
-        // TODO: Add code for manual thread interrupt
+    public void stopIndexing(boolean normalInterrupt) {
         log.debug("Stop indexing process for site " + site.getName());
         isIndexing(false);
+        if (!normalInterrupt) {
+            site.setLastError("Индексация остановлена пользователем");
+            site.setStatus(SiteStatus.FAILED);
+        } else {
+            site.setLastError("");
+            site.setStatus(SiteStatus.INDEXED);
+        }
+        sites.saveAndFlush(site);
         if (pool.getActiveThreadCount() > 0) {
             pool.shutdownNow();
         }
