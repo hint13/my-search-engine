@@ -2,8 +2,10 @@
 
 indexing-settings:
   sites:
+    - url: http://localhost
+      name: Localhost Test Site
 #    - url: http://localhost
-#      name: Localhost Test Site
+#      name: Localhost New Test Site
     - url: https://lenta.ru
       name: Лента.ру
 #    - url: https://skillbox.ru
