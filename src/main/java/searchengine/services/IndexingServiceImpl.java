@@ -11,6 +11,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.*;
 import searchengine.model.*;
+import searchengine.services.indexing.SiteIndexer;
 
 import java.time.LocalDateTime;
 import java.util.LinkedList;
