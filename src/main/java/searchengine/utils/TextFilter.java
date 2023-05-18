@@ -58,7 +58,7 @@ public class TextFilter {
         return rusLM;
     }
 
-    public Map<String, Integer> calcLemmas() {
+    public Map<String, Integer> calcLemmas(boolean byOne) {
         Map<String, Integer> lemmasCount = new HashMap<>();
 
         List<String> words = getWords(text);
@@ -69,9 +69,15 @@ public class TextFilter {
                     lemmasCount.put(lemma, 0);
                 }
                 lemmasCount.put(lemma, lemmasCount.get(lemma) + 1);
+                if (byOne)
+                    break;
             }
         }
         return lemmasCount;
+    }
+
+    public Map<String, Integer> calcLemmas() {
+        return calcLemmas(true);
     }
 
     public List<String> getWords(String text) {
@@ -155,9 +161,14 @@ public class TextFilter {
                 Bombay Dreams is based in the Indian film industry and features an all-Asian cast. The story centers around Akaash, a poor boy played by Raza Jaffrey, who becomes a film star and falls in love with the daughter of one of Bombay's greatest film directors. The show features modern Indian pop music, such as "Shakalaka Baby", and dazzling costumes and choreography. It opened in 2002 and quickly became one of the most popular shows in London.
                 We Will Rock You opened in 2002. This musical, with a script by comedian Ben Elton, takes place in the future when rock music is illegal. The story is based on famous songs by Queen such as "Bohemian Rhapsody" and "I Want to Break Free", the set resembles a rock concert and there are plenty of special effects. And Tony Vincent, who plays the hero Galileo Figaro, sounds very like Queen's lead singer, Freddie Mercury.""";
 
+        String testText = """
+                Повторное появление леопарда в Осетии позволяет предположить, что леопард постоянно обитает в некоторых районах Северного Кавказа.
+                """;
+
 //        TextFilter textFilter = new TextFilter(text + " " + html);
 //        TextFilter textFilter = new TextFilter(text);
-        TextFilter textFilter = new TextFilter("in on at by the one two three two three three four four four four");
+        TextFilter textFilter = new TextFilter(testText);
+//        TextFilter textFilter = new TextFilter("in on at by the one two three two three three four four four four");
         textFilter.calcLemmas().forEach((key, value) -> System.out.println(key + ": " + value));
 //        textFilter.printMorphInfo("in", "one", "at");
 //        textFilter.printMorphInfo();
