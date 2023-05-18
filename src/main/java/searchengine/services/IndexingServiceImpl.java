@@ -38,7 +38,6 @@ public class IndexingServiceImpl implements IndexingService {
         this.sitesConfig = sitesConfig;
         this.botConfig = botConfig;
         this.siteIndexers = new LinkedList<>();
-
     }
 
     private boolean checkIndexingStatus() {
@@ -108,5 +107,13 @@ public class IndexingServiceImpl implements IndexingService {
             task.interrupt();
         }
         siteIndexers.clear();
+    }
+
+    @Override
+    public IndexingResponse indexPage(String url) {
+        IndexingResponse response = new IndexingResponseError(IndexingResponseError.msgBadPageUrl);
+        // TODO: add code for index one page by url, if exists
+        log.debug("Start indexing one page: " + url);
+        return  response;
     }
 }
