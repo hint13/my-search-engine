@@ -53,9 +53,9 @@ public class SiteIndexer extends Thread {
     public void startIndexing() {
         log.debug("siteIndexer(" + site.getUrl() + ")");
         isIndexing(true);
-        PageIndexer task = new PageIndexer(botConfig, pages);
+        PagesIndexer task = new PagesIndexer(botConfig, pages);
         task.init(site, "/");
-        PageIndexer.clearUrlCacheForSite(site.getUrl());
+        PagesIndexer.clearUrlCacheForSite(site.getUrl());
         log.debug("Pool for site " + site.getName() + " started.");
         ForkJoinTask<Integer> futureTask = pool.submit(task);
         do {

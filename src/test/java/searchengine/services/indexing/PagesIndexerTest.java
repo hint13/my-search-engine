@@ -9,24 +9,24 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PageIndexerTest {
-    private PageIndexer pageIndexer;
+class PagesIndexerTest {
+    private PagesIndexer pagesIndexer;
     private final String[] urls = {"/", "/index.html", "/doc1.html", "doc2.html", "doc3.html"};
     private final String site1 = "http://localhost";
     private final String site2 = "http://www.site.url";
 
     @BeforeEach
     void setUp() throws NoSuchFieldException {
-        pageIndexer = new PageIndexer(null, null);
+        pagesIndexer = new PagesIndexer(null, null);
         for (String url : urls) {
-            PageIndexer.addUrlToCache(site1 + url);
-            PageIndexer.addUrlToCache(site2 + url);
+            PagesIndexer.addUrlToCache(site1 + url);
+            PagesIndexer.addUrlToCache(site2 + url);
         }
     }
 
     @AfterEach
     void tearDown() {
-        PageIndexer.clearUrlCache();
+        PagesIndexer.clearUrlCache();
     }
 
     @Test
@@ -35,8 +35,8 @@ class PageIndexerTest {
         for (String url : urls) {
             expectedUrlCache.add(site2 + url);
         }
-        PageIndexer.clearUrlCacheForSite(site1);
-        Set<String> actualUrlCache = PageIndexer.getUrlCache();
+        PagesIndexer.clearUrlCacheForSite(site1);
+        Set<String> actualUrlCache = PagesIndexer.getUrlCache();
         assertEquals(expectedUrlCache, actualUrlCache);
     }
 }

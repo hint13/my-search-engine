@@ -19,8 +19,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
 
-public class PageIndexer extends RecursiveTask<Integer> {
-    private static final Logger log = LogManager.getLogger(PageIndexer.class);
+public class PagesIndexer extends RecursiveTask<Integer> {
+    private static final Logger log = LogManager.getLogger(PagesIndexer.class);
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
 
     private final Bot botConfig;
@@ -31,7 +31,7 @@ public class PageIndexer extends RecursiveTask<Integer> {
 
     private Integer urlsCount;
 
-    public PageIndexer(Bot botConfig, PageRepository pages) {
+    public PagesIndexer(Bot botConfig, PageRepository pages) {
         urlsCount = 0;
         this.pages = pages;
         this.botConfig = botConfig;
@@ -89,9 +89,9 @@ public class PageIndexer extends RecursiveTask<Integer> {
         urlsCount += 1;
         page.setId(0);
         pages.save(page);
-        List<PageIndexer> tasks = new LinkedList<>();
+        List<PagesIndexer> tasks = new LinkedList<>();
         for (String link : links) {
-            PageIndexer task = new PageIndexer(botConfig, pages);
+            PagesIndexer task = new PagesIndexer(botConfig, pages);
             task.init(page.getSite(), link);
             try {
                 Thread.sleep(botConfig.getTimeout());
@@ -104,7 +104,7 @@ public class PageIndexer extends RecursiveTask<Integer> {
         }
         int count = 0;
         do {
-            for (PageIndexer task : tasks) {
+            for (PagesIndexer task : tasks) {
                 if (isCancelled()) {
                     if (!task.isCancelled() && !task.isDone()) {
                         task.cancel(true);
