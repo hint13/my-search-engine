@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import searchengine.model.*;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -45,6 +44,7 @@ public class DataAccessManager {
                 .orElse(new LemmaEntity(site, lemma));
     }
 
+    @Transactional
     public void deletePagesBySite(SiteEntity site) {
         List<PageEntity> pageEntityList = pages.findAllBySiteId(site.getId());
         if (!pageEntityList.isEmpty()) {
@@ -58,6 +58,7 @@ public class DataAccessManager {
         }
     }
 
+    @Transactional
     private void deleteLemmasFromIndexByPageId(Integer pageId) {
         List<IndexEntity> indexEntityList = indexes.findAllByPageId(pageId);
         log.debug("Deleting " + indexEntityList.size() + " lemmas for page(" + pageId + ") in index table");
@@ -65,11 +66,19 @@ public class DataAccessManager {
         indexes.flush();
     }
 
+    @Transactional
     private void deleteLemmasFromLemmaBySiteId(Integer siteId) {
         // Delete all lemmas for site_id in table:lemma
         List<LemmaEntity> lemmaEntityList = lemmas.findAllBySiteId((siteId));
         log.debug("Deleting " + lemmaEntityList.size() + " lemmas for site(" + siteId + ") in lemma table");
         lemmas.deleteAllInBatch(lemmaEntityList);
         lemmas.flush();
+    }
+
+    @Override
+    public String toString() {
+        return "Total: sites(" + sites.count() +
+                "), pages(" + pages.count() +
+                "), lemmas(" + lemmas.count() + ")";
     }
 }
