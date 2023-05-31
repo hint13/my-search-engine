@@ -31,12 +31,12 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
         for (Site site : sitesConfig.getSites()) {
-            Optional<SiteEntity> entity = sites.findByUrlIgnoreCase(site.getUrl());
+            SiteEntity entity = sites.findSiteEntityByUrlIgnoreCase(site.getUrl());
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             item.setName(site.getName());
             item.setUrl(site.getUrl());
-            if (entity.isPresent()) {
-                SiteEntity siteEntity = entity.get();
+            if (entity != null) {
+                SiteEntity siteEntity = entity;
                 int pagesCount = sites.countPagesBySiteId(siteEntity.getId());
                 int lemmasCount = sites.countLemmasBySiteId(siteEntity.getId());
                 item.setPages(pagesCount);

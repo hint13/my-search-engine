@@ -4,10 +4,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import searchengine.config.Bot;
-import searchengine.model.PageRepository;
-import searchengine.model.SiteEntity;
-import searchengine.model.SiteRepository;
-import searchengine.model.SiteStatus;
+import searchengine.model.*;
+import searchengine.services.DataAccessManager;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,18 +13,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SiteIndexer extends Thread {
     private final static Logger log = LogManager.getLogger(SiteIndexer.class);
 
-    private final SiteRepository sites;
-    private final PageRepository pages;
+    private final DataAccessManager dam;
     private final Bot botConfig;
 
     private final SiteEntity site;
     private final ForkJoinPool pool;
     private final AtomicBoolean isIndexing;
 
-    public SiteIndexer(SiteEntity site, SiteRepository sites,  PageRepository pages, Bot botConfig) {
+    public SiteIndexer(SiteEntity site, DataAccessManager dam, Bot botConfig) {
         this.site = site;
-        this.sites = sites;
-        this.pages = pages;
+        this.dam = dam;
         int coreCount = Runtime.getRuntime().availableProcessors();
         this.pool = new ForkJoinPool(coreCount);
         this.botConfig = botConfig;
@@ -53,9 +49,9 @@ public class SiteIndexer extends Thread {
     public void startIndexing() {
         log.debug("siteIndexer(" + site.getUrl() + ")");
         isIndexing(true);
-        PagesIndexer task = new PagesIndexer(botConfig, pages);
+        PagesIndexer task = new PagesIndexer(botConfig, dam);
         task.init(site, "/");
-        PagesIndexer.clearUrlCacheForSite(site.getUrl());
+        PagesIndexer.removeSiteFromUrlCache(site.getUrl());
         log.debug("Pool for site " + site.getName() + " started.");
         ForkJoinTask<Integer> futureTask = pool.submit(task);
         do {
@@ -89,7 +85,7 @@ public class SiteIndexer extends Thread {
             site.setLastError("");
             site.setStatus(SiteStatus.INDEXED);
         }
-        sites.saveAndFlush(site);
+        dam.saveSite(site);
         if (pool.getActiveThreadCount() > 0) {
             pool.shutdownNow();
         }

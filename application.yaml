@@ -42,5 +42,7 @@ logging:
     searchengine:
       services:
         IndexingServiceImpl: DEBUG
-        SiteIndexer: DEBUG
-        PageIndexer: DEBUG
+        DataAccessManager: DEBUG
+        indexing:
+          SiteIndexer: DEBUG
+          PagesIndexer: DEBUG

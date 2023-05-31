@@ -30,6 +30,13 @@ public class LemmaEntity {
     @Column(name = "frequency", nullable = false)
     private Integer frequency;
 
+    public LemmaEntity(SiteEntity site, String lemma) {
+        this.id = 0;
+        this.site = site;
+        this.lemma = lemma;
+        this.frequency = 0;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

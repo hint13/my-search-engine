@@ -13,10 +13,11 @@ import searchengine.dto.indexing.*;
 import searchengine.model.*;
 import searchengine.services.indexing.SiteIndexer;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -24,17 +25,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class IndexingServiceImpl implements IndexingService {
     private static final Logger log = LogManager.getLogger(IndexingServiceImpl.class);
 
-    private final SiteRepository sites;
-    private final PageRepository pages;
+    private final DataAccessManager dam;
     private final SitesList sitesConfig;
     private final Bot botConfig;
 
     private final List<Thread> siteIndexers;
 
     @Autowired
-    public IndexingServiceImpl(SiteRepository sites, PageRepository pages, @NotNull SitesList sitesConfig, Bot botConfig) {
-        this.sites = sites;
-        this.pages = pages;
+    public IndexingServiceImpl(DataAccessManager dam,
+                               @NotNull SitesList sitesConfig, Bot botConfig) {
+        this.dam = dam;
         this.sitesConfig = sitesConfig;
         this.botConfig = botConfig;
         this.siteIndexers = new LinkedList<>();
@@ -62,32 +62,22 @@ public class IndexingServiceImpl implements IndexingService {
     private void startIndexingProcess() {
         for (Site site : sitesConfig.getSites()) {
             SiteEntity siteEntity = insertOrGetSite(site);
-            deletePagesBySiteId(siteEntity);
-            SiteIndexer siteIndexer = new SiteIndexer(siteEntity, sites, pages, botConfig);
+            dam.deletePagesBySite(siteEntity);
+            SiteIndexer siteIndexer = new SiteIndexer(siteEntity, dam, botConfig);
             siteIndexers.add(siteIndexer);
             siteIndexer.start();
         }
     }
 
     private SiteEntity insertOrGetSite(Site site) {
-        Optional<SiteEntity> entity = sites.findByUrlIgnoreCase(site.getUrl());
-        SiteEntity siteEntity = entity.orElseGet(SiteEntity::new);
+        SiteEntity entity = dam.getSiteByUrl(site.getUrl());
+        SiteEntity siteEntity = entity == null ? new SiteEntity() : entity;
         siteEntity.setUrl(site.getUrl());
         siteEntity.setName(site.getName());
         siteEntity.setStatus(SiteStatus.INDEXING);
         siteEntity.setStatusTime(LocalDateTime.now());
         siteEntity.setLastError("");
-        sites.saveAndFlush(siteEntity);
-        return siteEntity;
-    }
-
-    private void deletePagesBySiteId(SiteEntity site) {
-        List<PageEntity> pageEntityList = pages.findAllBySiteId(site.getId());
-        if (!pageEntityList.isEmpty()) {
-            log.debug("delete Pages by siteId: " + site.getId() + "(" + pageEntityList.size() + ")");
-            pages.deleteAllInBatch(pageEntityList);
-            pages.flush();
-        }
+        return dam.saveSite(siteEntity);
     }
 
     @Override
@@ -111,9 +101,34 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexingResponse indexPage(String url) {
-        IndexingResponse response = new IndexingResponseError(IndexingResponseError.msgBadPageUrl);
-        // TODO: add code for index one page by url, if exists
-        log.debug("Start indexing one page: " + url);
+        boolean urlInSites = sitesConfig.isUrlInSites(url);
+        IndexingResponse response = urlInSites ?
+                new IndexingResponse() :
+                new IndexingResponseError(IndexingResponseError.msgBadPageUrl);
+        if (urlInSites) {
+            startIndexingPage(url);
+            log.debug("Start indexing one page: " + url);
+        } else {
+            log.debug("Indexing not started. Page " + url + " not in sites.");
+        }
         return  response;
+    }
+
+    public void startIndexingPage(String pageUrl) {
+        // TODO: add code for index one page by url
+        URL url;
+        try {
+            url = new URL(pageUrl);
+        } catch (MalformedURLException e) {
+            log.error("Bad page url format: " + pageUrl);
+            return;
+        }
+        String siteUrl = url.getProtocol() + "://" + url.getAuthority();
+        String pagePath = url.getPath();
+//        log.debug("### parsing url: " + pageUrl + ":: site(" + siteUrl + "), page(" + pagePath + ").");
+        SiteEntity site = dam.getSiteByUrl(siteUrl);
+        log.debug("### site: " + site);
+//        PageEntity page = pages.findFirstBySiteIdAndPath(site.getId(), pagePath).orElseGet(PageEntity::new);
+//        log.debug("### page: " + page);
     }
 }

@@ -34,6 +34,13 @@ public class IndexEntity {
     @Column(name = "`rank`", nullable = false)
     private Float rank;
 
+    public IndexEntity(PageEntity page, LemmaEntity lemma, Float rank) {
+        this.id = 0;
+        this.page = page;
+        this.lemma = lemma;
+        this.rank = rank;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

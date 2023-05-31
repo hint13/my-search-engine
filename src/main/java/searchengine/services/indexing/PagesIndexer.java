@@ -8,9 +8,9 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import searchengine.config.Bot;
-import searchengine.model.PageEntity;
-import searchengine.model.PageRepository;
-import searchengine.model.SiteEntity;
+import searchengine.model.*;
+import searchengine.services.DataAccessManager;
+import searchengine.utils.TextFilter;
 import searchengine.utils.UrlFilter;
 
 import java.io.IOException;
@@ -24,16 +24,16 @@ public class PagesIndexer extends RecursiveTask<Integer> {
     private static final Set<String> urlCache = new ConcurrentSkipListSet<>();
 
     private final Bot botConfig;
-    private final PageRepository pages;
+    private final DataAccessManager dam;
 
     private PageEntity page;
     private String siteUrl;
 
     private Integer urlsCount;
 
-    public PagesIndexer(Bot botConfig, PageRepository pages) {
+    public PagesIndexer(Bot botConfig, DataAccessManager dam) {
         urlsCount = 0;
-        this.pages = pages;
+        this.dam = dam;
         this.botConfig = botConfig;
     }
 
@@ -44,25 +44,17 @@ public class PagesIndexer extends RecursiveTask<Integer> {
         siteUrl = site.getUrl();
     }
 
-    static void addUrlToCache(String url) {
+    static boolean updateUrlCache(String url) {
         synchronized (urlCache) {
+            if (urlCache.contains(url)) {
+                return false;
+            }
             urlCache.add(url);
         }
+        return true;
     }
 
-    static Set<String> getUrlCache() {
-        synchronized (urlCache) {
-            return urlCache;
-        }
-    }
-
-    public static void clearUrlCache() {
-        synchronized (urlCache) {
-            urlCache.clear();
-        }
-    }
-
-    public static void clearUrlCacheForSite(String siteUrl) {
+    public static void removeSiteFromUrlCache(String siteUrl) {
         synchronized (urlCache) {
             urlCache.stream()
                     .filter(url -> url.startsWith(siteUrl))
@@ -73,25 +65,22 @@ public class PagesIndexer extends RecursiveTask<Integer> {
     @Override
     protected Integer compute() {
         String url = page.getFullPath();
-        synchronized (urlCache) {
-            if (urlCache.contains(url)) {
-                return 0;
-            }
-            urlCache.add(url);
+        if (!updateUrlCache(url)) {
+            return 0;
         }
         Set<String> links;
         try {
-            links = loadPage();
+            Document doc = loadPage();
+            links = getLinksFromPageDoc(doc);
+            indexLemmas(doc);
         } catch (IOException ex) {
-            log.warn("Error loading page " + page.getFullPath() + ": " + ex.getMessage());
+            log.warn("Error loading page " + url + ": " + ex.getMessage());
             return 0;
         }
         urlsCount += 1;
-        page.setId(0);
-        pages.save(page);
         List<PagesIndexer> tasks = new LinkedList<>();
         for (String link : links) {
-            PagesIndexer task = new PagesIndexer(botConfig, pages);
+            PagesIndexer task = new PagesIndexer(botConfig, dam);
             task.init(page.getSite(), link);
             try {
                 Thread.sleep(botConfig.getTimeout());
@@ -119,7 +108,7 @@ public class PagesIndexer extends RecursiveTask<Integer> {
         return urlsCount;
     }
 
-    private Set<String> loadPage() throws IOException {
+    private Document loadPage() throws IOException {
         Connection conn = Jsoup.connect(page.getFullPath())
                 .userAgent(botConfig.getUseragent())
                 .referrer(botConfig.getReferrer());
@@ -130,7 +119,29 @@ public class PagesIndexer extends RecursiveTask<Integer> {
         Document doc = response.parse();
         page.setCode(response.statusCode());
         page.setContent(doc.toString());
-        return getLinksFromPageDoc(doc);
+        page.setId(0);
+        page = dam.savePage(page);
+        log.debug("Page " + page.getFullPath() + " saved.");
+        return doc;
+    }
+
+    private void indexLemmas(Document doc) {
+        TextFilter textFilter = new TextFilter(doc);
+        Map<String, Integer> lemmasMap = textFilter.calcLemmas();
+        Map<String, LemmaEntity> lemmaEntityMap = new HashMap();
+        for (Map.Entry<String, Integer> entry : lemmasMap.entrySet()) {
+            LemmaEntity lemmaEntity = dam.getLemmaEntityBySite(page.getSite(), entry.getKey());
+            lemmaEntity.setFrequency(lemmaEntity.getFrequency() + entry.getValue());
+            lemmaEntityMap.merge(entry.getKey(), lemmaEntity, (prev, val) -> {
+                prev.setFrequency(prev.getFrequency() + val.getFrequency());
+                return prev;
+            });
+            log.debug(lemmaEntity);
+//            IndexEntity indexEntity = new IndexEntity(page, lemmaEntity, Float.valueOf(entry.getValue()));
+//            index.saveAndFlush(indexEntity);
+        }
+        dam.saveLemmas(lemmaEntityMap.values());
+        log.debug("For page " + page.getFullPath() + " added " + lemmasMap.size() + " lemmas to index.");
     }
 
     private Set<String> getLinksFromPageDoc(Document doc) {

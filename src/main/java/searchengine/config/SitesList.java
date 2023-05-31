@@ -22,4 +22,13 @@ public class SitesList {
         });
         return sitesList;
     }
+
+    public boolean isUrlInSites(String url) {
+        for (Site site : sites) {
+            if (url.startsWith(site.getUrl())) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
