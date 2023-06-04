@@ -21,27 +21,51 @@ public class DataAccessManager {
     private IndexRepository indexes;
 
     public SiteEntity getSiteByUrl(String siteUrl) {
-        return sites.findSiteEntityByUrlIgnoreCase(siteUrl);
+        return sites.findSiteEntityByUrlEqualsIgnoreCase(siteUrl);
+    }
+
+    public PageEntity getPageForSiteByPath(SiteEntity site, String pagePath) {
+        return pages.findPageEntityBySiteAndPath(site, pagePath);
     }
 
     @Transactional
     public SiteEntity saveSite(SiteEntity site) {
-        return sites.save(site);
+        return sites.saveAndFlush(site);
     }
 
     @Transactional
     public PageEntity savePage(PageEntity page) {
-        return pages.save(page);
+        return pages.saveAndFlush(page);
     }
 
     @Transactional
-    public Iterable<LemmaEntity> saveLemmas(Collection<LemmaEntity> lemmaEntityList) {
-        return lemmas.saveAll(lemmaEntityList);
+    public Iterable<PageEntity> savePages(Collection<PageEntity> pageEntities) {
+        return pages.saveAllAndFlush(pageEntities);
+    }
+
+    @Transactional
+    public Iterable<LemmaEntity> saveLemmas(Collection<LemmaEntity> lemmaEntities) {
+        log.debug("###! save " + lemmaEntities.size() + " lemmas");
+        return lemmas.saveAllAndFlush(lemmaEntities);
+    }
+
+    @Transactional
+    public LemmaEntity saveLemma(LemmaEntity lemma) {
+        return lemmas.saveAndFlush(lemma);
+    }
+
+    @Transactional
+    public IndexEntity saveIndex(IndexEntity index) {
+        return indexes.saveAndFlush(index);
+    }
+
+    @Transactional
+    public Iterable<IndexEntity> saveIndexes(Collection<IndexEntity> indexEntities) {
+        return indexes.saveAllAndFlush(indexEntities);
     }
 
     public LemmaEntity getLemmaEntityBySite(SiteEntity site, String lemma) {
-        return lemmas.findLemmaEntityBySiteIdAndLemma(site.getId(), lemma)
-                .orElse(new LemmaEntity(site, lemma));
+        return lemmas.findFirstLemmaEntityBySiteIdAndLemma(site.getId(), lemma);
     }
 
     @Transactional
@@ -59,7 +83,16 @@ public class DataAccessManager {
     }
 
     @Transactional
-    private void deleteLemmasFromIndexByPageId(Integer pageId) {
+    public void deletePage(PageEntity page) {
+        deleteLemmasFromIndexByPageId(page.getId());
+        // FIXME: add decrement for lemma's frequency
+        log.debug("Deleting page " + page);
+        pages.delete(page);
+        pages.flush();
+    }
+
+    @Transactional
+    public void deleteLemmasFromIndexByPageId(Integer pageId) {
         List<IndexEntity> indexEntityList = indexes.findAllByPageId(pageId);
         log.debug("Deleting " + indexEntityList.size() + " lemmas for page(" + pageId + ") in index table");
         indexes.deleteAllInBatch(indexEntityList);
@@ -67,9 +100,8 @@ public class DataAccessManager {
     }
 
     @Transactional
-    private void deleteLemmasFromLemmaBySiteId(Integer siteId) {
-        // Delete all lemmas for site_id in table:lemma
-        List<LemmaEntity> lemmaEntityList = lemmas.findAllBySiteId((siteId));
+    public void deleteLemmasFromLemmaBySiteId(Integer siteId) {
+        List<LemmaEntity> lemmaEntityList = lemmas.findAllLemmaEntitiesBySiteId((siteId));
         log.debug("Deleting " + lemmaEntityList.size() + " lemmas for site(" + siteId + ") in lemma table");
         lemmas.deleteAllInBatch(lemmaEntityList);
         lemmas.flush();

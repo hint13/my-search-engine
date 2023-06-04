@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 
 @Setter
 @Component
@@ -30,5 +31,14 @@ public class SitesList {
             }
         }
         return false;
+    }
+
+    public Optional<Site> getSite(String siteUrl) {
+        for (Site site : sites) {
+            if (site.getUrl().equals(siteUrl)) {
+                return Optional.of(site);
+            }
+        }
+        return Optional.empty();
     }
 }

@@ -58,7 +58,7 @@ public class TextFilter {
         return rusLM;
     }
 
-    public Map<String, Integer> calcLemmas(boolean byOne) {
+    public Map<String, Integer> calcLemmas(boolean useOnlyOneMorphForm) {
         Map<String, Integer> lemmasCount = new HashMap<>();
 
         List<String> words = getWords(text);
@@ -69,7 +69,7 @@ public class TextFilter {
                     lemmasCount.put(lemma, 0);
                 }
                 lemmasCount.put(lemma, lemmasCount.get(lemma) + 1);
-                if (byOne)
+                if (useOnlyOneMorphForm)
                     break;
             }
         }

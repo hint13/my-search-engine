@@ -46,3 +46,4 @@ logging:
         indexing:
           SiteIndexer: DEBUG
           PagesIndexer: DEBUG
+          PageIndex: DEBUG

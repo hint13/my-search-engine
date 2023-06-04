@@ -49,9 +49,9 @@ public class SiteIndexer extends Thread {
     public void startIndexing() {
         log.debug("siteIndexer(" + site.getUrl() + ")");
         isIndexing(true);
+        PagesIndexer.removeSiteFromUrlCache(site.getUrl());
         PagesIndexer task = new PagesIndexer(botConfig, dam);
         task.init(site, "/");
-        PagesIndexer.removeSiteFromUrlCache(site.getUrl());
         log.debug("Pool for site " + site.getName() + " started.");
         ForkJoinTask<Integer> futureTask = pool.submit(task);
         do {
@@ -76,14 +76,13 @@ public class SiteIndexer extends Thread {
     }
 
     public void stopIndexing(boolean normalInterrupt) {
-        log.debug("Stop indexing process for site " + site.getName());
         isIndexing(false);
         if (!normalInterrupt) {
-            site.setLastError("Индексация остановлена пользователем");
-            site.setStatus(SiteStatus.FAILED);
+            log.debug("Interrupt indexing process for site " + site.getName());
+            site.updateStatus(SiteStatus.FAILED, "Индексация остановлена пользователем");
         } else {
-            site.setLastError("");
-            site.setStatus(SiteStatus.INDEXED);
+            log.debug("Finish indexing process for site " + site.getName());
+            site.updateStatus(SiteStatus.INDEXED);
         }
         dam.saveSite(site);
         if (pool.getActiveThreadCount() > 0) {

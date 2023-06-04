@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import jakarta.persistence.*;
+import org.hibernate.Hibernate;
+
 import java.util.Objects;
 
 @Getter
@@ -44,12 +46,13 @@ public class IndexEntity {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof IndexEntity index)) return false;
-        return getId().equals(index.getId()) && getPage().equals(index.getPage()) && getLemma().equals(index.getLemma()) && getRank().equals(index.getRank());
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        IndexEntity index = (IndexEntity) o;
+        return getId() != null && Objects.equals(getId(), index.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getPage(), getLemma(), getRank());
+        return getClass().hashCode();
     }
 }

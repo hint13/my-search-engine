@@ -40,6 +40,22 @@ public class SiteEntity {
     @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<PageEntity> pages;
 
+    public SiteEntity(String url, String name) {
+        this.url = url;
+        this.name = name;
+        this.lastError = "";
+    }
+
+    public void updateStatus(SiteStatus status) {
+        updateStatus(status, "");
+    }
+
+    public void updateStatus(SiteStatus status, String lastError) {
+        setStatus(status);
+        setStatusTime(LocalDateTime.now());
+        setLastError(lastError);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -55,6 +71,6 @@ public class SiteEntity {
 
     @Override
     public String toString() {
-        return "Site(<" + status + "> " + url + " [" + pages.size() + "])";
+        return "Site(<" + id + "> " + url + " [" + (pages != null ? pages.size() : 0) + "])";
     }
 }

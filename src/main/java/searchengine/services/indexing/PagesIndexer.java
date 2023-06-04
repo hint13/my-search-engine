@@ -2,15 +2,12 @@ package searchengine.services.indexing;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import searchengine.config.Bot;
 import searchengine.model.*;
 import searchengine.services.DataAccessManager;
-import searchengine.utils.TextFilter;
 import searchengine.utils.UrlFilter;
 
 import java.io.IOException;
@@ -38,9 +35,7 @@ public class PagesIndexer extends RecursiveTask<Integer> {
     }
 
     public void init(SiteEntity site, String pagePath) {
-        page = new PageEntity();
-        page.setSite(site);
-        page.setPath(pagePath);
+        page = new PageEntity(site, pagePath);
         siteUrl = site.getUrl();
     }
 
@@ -78,18 +73,18 @@ public class PagesIndexer extends RecursiveTask<Integer> {
             return 0;
         }
         urlsCount += 1;
-        List<PagesIndexer> tasks = new LinkedList<>();
+        List<PagesIndexer> tasks = new ArrayList<>();
         for (String link : links) {
             PagesIndexer task = new PagesIndexer(botConfig, dam);
             task.init(page.getSite(), link);
+            task.fork();
+            tasks.add(task);
             try {
                 Thread.sleep(botConfig.getTimeout());
             } catch (InterruptedException e) {
                 log.error(e.getMessage());
                 return 0;
             }
-            task.fork();
-            tasks.add(task);
         }
         int count = 0;
         do {
@@ -109,39 +104,19 @@ public class PagesIndexer extends RecursiveTask<Integer> {
     }
 
     private Document loadPage() throws IOException {
-        Connection conn = Jsoup.connect(page.getFullPath())
-                .userAgent(botConfig.getUseragent())
-                .referrer(botConfig.getReferrer());
-        Connection.Response response = conn.execute();
-        if (response.statusCode() != 200) {
+        Optional<Document> result = page.loadContent(botConfig.getUseragent(), botConfig.getReferrer());
+        if (result.isEmpty()) {
             throw new IOException("Bad status code");
         }
-        Document doc = response.parse();
-        page.setCode(response.statusCode());
-        page.setContent(doc.toString());
-        page.setId(0);
+        Document doc = result.get();
         page = dam.savePage(page);
         log.debug("Page " + page.getFullPath() + " saved.");
         return doc;
     }
 
     private void indexLemmas(Document doc) {
-        TextFilter textFilter = new TextFilter(doc);
-        Map<String, Integer> lemmasMap = textFilter.calcLemmas();
-        Map<String, LemmaEntity> lemmaEntityMap = new HashMap();
-        for (Map.Entry<String, Integer> entry : lemmasMap.entrySet()) {
-            LemmaEntity lemmaEntity = dam.getLemmaEntityBySite(page.getSite(), entry.getKey());
-            lemmaEntity.setFrequency(lemmaEntity.getFrequency() + entry.getValue());
-            lemmaEntityMap.merge(entry.getKey(), lemmaEntity, (prev, val) -> {
-                prev.setFrequency(prev.getFrequency() + val.getFrequency());
-                return prev;
-            });
-            log.debug(lemmaEntity);
-//            IndexEntity indexEntity = new IndexEntity(page, lemmaEntity, Float.valueOf(entry.getValue()));
-//            index.saveAndFlush(indexEntity);
-        }
-        dam.saveLemmas(lemmaEntityMap.values());
-        log.debug("For page " + page.getFullPath() + " added " + lemmasMap.size() + " lemmas to index.");
+        PageIndex pageIndex = new PageIndex(dam, page);
+        pageIndex.indexOnePage(doc);
     }
 
     private Set<String> getLinksFromPageDoc(Document doc) {

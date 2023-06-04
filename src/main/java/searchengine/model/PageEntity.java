@@ -7,7 +7,13 @@ import lombok.Setter;
 import org.hibernate.Hibernate;
 
 import jakarta.persistence.*;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
+import java.io.IOException;
 import java.util.Objects;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Getter
@@ -33,6 +39,36 @@ public class PageEntity {
 
     @Column(name = "content", columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
+
+    public PageEntity(SiteEntity site, String pagePath) {
+        this.id = 0;
+        this.site = site;
+        this.path = pagePath;
+    }
+
+    public Optional<Document> loadContent(String userAgent, String referrer) {
+        Connection conn = Jsoup.connect(getFullPath())
+                .userAgent(userAgent)
+                .referrer(referrer);
+        Connection.Response response;
+        try {
+            response = conn.execute();
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+        if (response.statusCode() != 200) {
+            return Optional.empty();
+        }
+        Document doc;
+        try {
+            doc = response.parse();
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+        setCode(response.statusCode());
+        setContent(doc.toString());
+        return Optional.of(doc);
+    }
 
     @Override
     public boolean equals(Object o) {

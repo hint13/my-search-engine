@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import jakarta.persistence.*;
+import org.hibernate.Hibernate;
+
 import java.util.Objects;
 
 @Getter
@@ -31,21 +33,26 @@ public class LemmaEntity {
     private Integer frequency;
 
     public LemmaEntity(SiteEntity site, String lemma) {
+        this(site, lemma, 0);
+    }
+
+    public LemmaEntity(SiteEntity site, String lemma, Integer frequency) {
         this.id = 0;
         this.site = site;
         this.lemma = lemma;
-        this.frequency = 0;
+        this.frequency = frequency;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof LemmaEntity lemma1)) return false;
-        return getId().equals(lemma1.getId()) && getSite().equals(lemma1.getSite()) && getLemma().equals(lemma1.getLemma()) && getFrequency().equals(lemma1.getFrequency());
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        LemmaEntity lemma = (LemmaEntity) o;
+        return getId() != null && Objects.equals(getId(), lemma.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getSite(), getLemma(), getFrequency());
+        return getClass().hashCode();
     }
 }

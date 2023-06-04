@@ -31,7 +31,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
         for (Site site : sitesConfig.getSites()) {
-            SiteEntity entity = sites.findSiteEntityByUrlIgnoreCase(site.getUrl());
+            SiteEntity entity = sites.findSiteEntityByUrlEqualsIgnoreCase(site.getUrl());
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             item.setName(site.getName());
             item.setUrl(site.getUrl());
