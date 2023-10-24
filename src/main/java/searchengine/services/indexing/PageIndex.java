@@ -16,11 +16,11 @@ import java.util.Map;
 public class PageIndex {
     private static final Logger log = LogManager.getLogger(PageIndex.class);
 
-    private DataAccessManager dam;
+    private final DataAccessManager dam;
     private final PageEntity page;
 
     public void indexOnePage(Document doc) {
-        dam.deleteLemmasFromIndexByPageId(page.getId());
+        dam.deleteLemmasFromIndexByPage(page);
         TextFilter textFilter = new TextFilter(doc);
         Map<String, Integer> lemmasMap = textFilter.calcLemmas();
         List<IndexEntity> indexEntities = new ArrayList<>();
@@ -41,5 +41,4 @@ public class PageIndex {
         }
         return dam.saveLemma(lemmaEntity);
     }
-
 }

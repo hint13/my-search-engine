@@ -84,11 +84,18 @@ public class DataAccessManager {
 
     @Transactional
     public void deletePage(PageEntity page) {
+        lemmas.updateLemmasCountByPageIdForSiteId(page.getId(), page.getSite().getId());
+        lemmas.clearDummyLemmasForSiteId(page.getSite().getId());
+        lemmas.flush();
         deleteLemmasFromIndexByPageId(page.getId());
-        // FIXME: add decrement for lemma's frequency
         log.debug("Deleting page " + page);
         pages.delete(page);
         pages.flush();
+    }
+
+    // TODO : Add method for create new PageEntity object natively
+    public PageEntity newPageEntity() {
+        return null;
     }
 
     @Transactional
@@ -97,6 +104,11 @@ public class DataAccessManager {
         log.debug("Deleting " + indexEntityList.size() + " lemmas for page(" + pageId + ") in index table");
         indexes.deleteAllInBatch(indexEntityList);
         indexes.flush();
+    }
+
+    @Transactional
+    public void deleteLemmasFromIndexByPage(PageEntity page) {
+        deleteLemmasFromIndexByPageId(page.getId());
     }
 
     @Transactional

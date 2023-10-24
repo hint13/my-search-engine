@@ -114,7 +114,7 @@ public class PagesIndexer extends RecursiveTask<Integer> {
         return doc;
     }
 
-    private void indexLemmas(Document doc) {
+    private synchronized void indexLemmas(Document doc) {
         PageIndex pageIndex = new PageIndex(dam, page);
         pageIndex.indexOnePage(doc);
     }
